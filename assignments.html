@@ -5,6 +5,8 @@
 <title>Assignments</title>
 <style>
 body { font-family: Arial, sans-serif; margin:20px; }
+h1 { font-size:50px; margin-bottom:0; }
+h2 { font-size:26px; margin-top:0; margin-bottom:20px; }
 .menu { background:black; color:white; padding:15px; font-size:26px; cursor:pointer; position:fixed; top:0; left:0; width:100%; z-index:10; }
 .sidebar { width:200px; height:100vh; background:#222; position:fixed; top:0; left:-200px; transition:0.3s; padding-top:60px; z-index:9; }
 .sidebar a { display:block; padding:12px; color:white; text-decoration:none; font-size:18px; }
@@ -16,6 +18,7 @@ body { font-family: Arial, sans-serif; margin:20px; }
 .box { padding:12px; margin-bottom:10px; border-radius:8px; background:#eee; border-left:6px solid #666; color:black; display:flex; justify-content: space-between; align-items: center; }
 .assign-buttons button { margin-left:5px; padding:4px 6px; border:none; border-radius:4px; cursor:pointer; }
 input { margin:5px; padding:5px; }
+canvas {margin:10px;}
 </style>
 </head>
 <body>
@@ -28,7 +31,8 @@ input { margin:5px; padding:5px; }
 </div>
 
 <div class="section">
-<h2>Assignments</h2>
+<h1>Homework Tracker MVP</h1>
+<h2 id="welcomeText"></h2>
 
 <div id="classSelectArea"></div>
 
@@ -42,40 +46,41 @@ input { margin:5px; padding:5px; }
 <div id="doneTab" style="display:none;"></div>
 <div id="missingTab" style="display:none;"></div>
 
+<canvas id="progressChart" width="200" height="200"></canvas>
+
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 window.onload=function(){
     let currentUser = sessionStorage.getItem("currentUser");
     let currentType = sessionStorage.getItem("currentType");
     if(!currentUser || !currentType){ alert("Not logged in"); window.location.href="index.html"; return; }
+    document.getElementById("welcomeText").innerText = "Welcome, "+currentUser;
 
-    // Sidebar
     let sidebar = document.getElementById("side");
     document.querySelector(".menu").addEventListener('click', ()=>{ sidebar.style.left = (sidebar.style.left==="0px")?"-200px":"0px"; });
     document.querySelectorAll('#side a').forEach(link=>link.addEventListener('click', ()=>{ sidebar.style.left="-200px"; }));
-
     window.logout = function(){ sessionStorage.clear(); window.location.href="index.html"; }
 
-    // Get classes
-    let classes = [];
+    let classes=[];
     for(let key in localStorage){
         if(key.startsWith("class_")){
-            let c = JSON.parse(localStorage.getItem(key));
+            let c=JSON.parse(localStorage.getItem(key));
             if(currentType==="student" && c.students.includes(currentUser)) classes.push(key);
             if(currentType==="teacher" && c.teacher===currentUser) classes.push(key);
         }
     }
 
-    let classSelectArea = document.getElementById("classSelectArea");
+    let classSelectArea=document.getElementById("classSelectArea");
     if(currentType==="teacher"){
         classSelectArea.innerHTML='<select id="classSelect"><option value="">Select class</option></select> <button onclick="addAssignment()">Add Assignment</button>';
-        let select = document.getElementById("classSelect");
-        classes.forEach(c=>{ select.innerHTML+=`<option value="${c}">${c.replace("class_","")}</option>`; });
+        let select=document.getElementById("classSelect");
+        classes.forEach(c=>{ select.innerHTML+=`<option value="${c}">${JSON.parse(localStorage.getItem(c)).name} (${c.replace("class_","")})</option>`; });
     } else {
         classSelectArea.innerHTML='<select id="classSelect"><option value="">Select class</option></select>';
-        let select = document.getElementById("classSelect");
-        classes.forEach(c=>{ select.innerHTML+=`<option value="${c}">${c.replace("class_","")}</option>`; });
+        let select=document.getElementById("classSelect");
+        classes.forEach(c=>{ select.innerHTML+=`<option value="${c}">${JSON.parse(localStorage.getItem(c)).name} (${c.replace("class_","")})</option>`; });
     }
 
     let assignments=[];
@@ -99,51 +104,45 @@ window.onload=function(){
         let classData = JSON.parse(localStorage.getItem(select));
         classData.assignments = assignments;
         localStorage.setItem(select, JSON.stringify(classData));
+        updateChart();
     }
 
     function renderAssignments(){
-        let activeTab = document.getElementById("activeTab");
-        let doneTab = document.getElementById("doneTab");
-        let missingTab = document.getElementById("missingTab");
+        let activeTab=document.getElementById("activeTab");
+        let doneTab=document.getElementById("doneTab");
+        let missingTab=document.getElementById("missingTab");
         activeTab.innerHTML=""; doneTab.innerHTML=""; missingTab.innerHTML="";
 
         assignments.forEach((a,i)=>{
             let box=document.createElement("div");
             box.className="box";
-            box.innerHTML=`<div><b>${a.subject}:</b> ${a.name}<br>Due: ${a.due}</div>`;
+            box.innerHTML=`<div><b>${a.subject}:</b> ${a.name}<br>Due: <span id="due_${i}">${a.due}</span></div>`;
 
             let buttons=document.createElement("div");
             buttons.className="assign-buttons";
 
-            let status=a.statuses[currentUser];
-
-            if(status==="active"){
-                if(currentType==="student"){
-                    let doneBtn=document.createElement("button");
-                    doneBtn.innerText="Mark Done";
-                    doneBtn.onclick=()=>{ a.statuses[currentUser]="done"; saveAssignments(); renderAssignments(); };
-                    let missBtn=document.createElement("button");
-                    missBtn.innerText="Mark Missing";
-                    missBtn.onclick=()=>{ a.statuses[currentUser]="missing"; saveAssignments(); renderAssignments(); };
+            if(currentType==="student"){
+                let status=a.statuses[currentUser];
+                if(status==="active"){
+                    let doneBtn=document.createElement("button"); doneBtn.innerText="Mark Done"; doneBtn.onclick=()=>{ a.statuses[currentUser]="done"; saveAssignments(); renderAssignments(); };
+                    let missBtn=document.createElement("button"); missBtn.innerText="Mark Missing"; missBtn.onclick=()=>{ a.statuses[currentUser]="missing"; saveAssignments(); renderAssignments(); };
                     buttons.appendChild(doneBtn); buttons.appendChild(missBtn);
                     activeTab.appendChild(box);
-                }
-            } else if(status==="done"){
-                if(currentType==="student"){
-                    let delBtn=document.createElement("button");
-                    delBtn.innerText="Delete";
-                    delBtn.onclick=()=>{
-                        if(confirm("Delete assignment forever?")){
-                            assignments.splice(i,1); saveAssignments(); renderAssignments();
-                        }
-                    };
-                    buttons.appendChild(delBtn);
-                }
-                doneTab.appendChild(box);
-            } else if(status==="missing"){ missingTab.appendChild(box); }
+                } else if(status==="done"){
+                    let delBtn=document.createElement("button"); delBtn.innerText="Delete"; delBtn.onclick=()=>{ if(confirm("Delete assignment forever?")){ assignments.splice(i,1); saveAssignments(); renderAssignments(); } };
+                    buttons.appendChild(delBtn); doneTab.appendChild(box);
+                } else if(status==="missing"){ missingTab.appendChild(box); }
+            } else if(currentType==="teacher"){
+                let editBtn=document.createElement("button"); editBtn.innerText="Change Due Date"; editBtn.onclick=()=>{ let newDue=prompt("New Due Date",a.due); if(newDue){ a.due=newDue; saveAssignments(); renderAssignments(); } };
+                let delBtn=document.createElement("button"); delBtn.innerText="Delete"; delBtn.onclick=()=>{ if(confirm("Delete assignment?")){ assignments.splice(i,1); saveAssignments(); renderAssignments(); } };
+                buttons.appendChild(editBtn); buttons.appendChild(delBtn);
+                activeTab.appendChild(box); // Only use one tab for teacher
+            }
 
             box.appendChild(buttons);
         });
+
+        updateChart();
     }
 
     window.addAssignment=function(){
@@ -153,25 +152,11 @@ window.onload=function(){
         if(!name) return;
         let subject=prompt("Subject:");
         if(!subject) return;
-        let due=prompt("Due date (e.g., 11/23/2025 12PM):","11/23/2025 12PM");
+        let due=prompt("Due date (e.g., 11/23/2025 12PM)","11/23/2025 12PM");
         assignments.push({name, subject, due, statuses:{}});
         saveAssignments(); renderAssignments();
     }
 
     document.getElementById("classSelect").addEventListener("change", loadAssignments);
 
-    // Tabs
-    document.querySelectorAll(".tab button").forEach(btn=>{
-        btn.addEventListener("click", ()=>{
-            document.querySelectorAll(".tab button").forEach(b=>b.classList.remove("active"));
-            btn.classList.add("active");
-            document.getElementById("activeTab").style.display=(btn.dataset.tab==="active")?"block":"none";
-            document.getElementById("doneTab").style.display=(btn.dataset.tab==="done")?"block":"none";
-            document.getElementById("missingTab").style.display=(btn.dataset.tab==="missing")?"block":"none";
-        });
-    });
-
-}
-</script>
-</body>
-</html>
+    // Tabs only for students
