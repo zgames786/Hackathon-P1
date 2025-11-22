@@ -10,13 +10,12 @@ body { font-family: Arial, sans-serif; margin:20px; }
 .sidebar a { display:block; padding:12px; color:white; text-decoration:none; font-size:18px; }
 .sidebar a:hover { background:#444; }
 .section { margin-top:90px; margin-left:20px; }
-button { padding:10px 15px; margin:5px; }
+button, input { padding:8px 12px; margin:5px 0; }
 </style>
 </head>
 <body>
 
 <div class="menu">☰</div>
-
 <div id="side" class="sidebar">
   <a href="home.html">Home</a>
   <a href="assignments.html">Assignments</a>
@@ -35,6 +34,7 @@ window.onload = function(){
     if(!currentUser || !currentType){ alert("Not logged in"); window.location.href="index.html"; return; }
 
     let dashboard = document.getElementById("dashboardArea");
+
     if(currentType === "student"){
         dashboard.innerHTML = `
         <h3>Student Dashboard</h3>
@@ -52,14 +52,14 @@ window.onload = function(){
         displayCreatedClasses();
     }
 
-    // Sidebar toggle & auto-collapse
+    // Sidebar toggle
     let sidebar = document.getElementById("side");
     document.querySelector(".menu").addEventListener('click', ()=>{ sidebar.style.left = (sidebar.style.left==="0px")?"-200px":"0px"; });
     document.querySelectorAll('#side a').forEach(link=>link.addEventListener('click', ()=>{ sidebar.style.left="-200px"; }));
 
     window.logout = function(){ sessionStorage.clear(); window.location.href="index.html"; }
 
-    // STUDENT FUNCTIONS
+    // STUDENT
     window.joinClass = function(){
         let code = document.getElementById("joinCode").value.trim();
         if(!code){ alert("Enter a class code"); return; }
@@ -86,7 +86,7 @@ window.onload = function(){
         }
     }
 
-    // TEACHER FUNCTIONS
+    // TEACHER
     window.createClass = function(){
         let code = generateCode(7);
         let classObj = {teacher: currentUser, students:[], assignments:[]};
@@ -114,7 +114,6 @@ window.onload = function(){
         for(let i=0;i<length;i++){ code += chars.charAt(Math.floor(Math.random()*chars.length)); }
         return code;
     }
-
 }
 </script>
 
