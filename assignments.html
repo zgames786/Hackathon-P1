@@ -5,12 +5,19 @@
 <title>Assignments</title>
 <style>
 body { font-family: Arial, sans-serif; margin:20px; }
-.menu { background:black; color:white; padding:15px; font-size:26px; cursor:pointer; position:fixed; top:0; left:0; width:100%; }
-.sidebar { width:200px; height:100vh; background:#222; position:fixed; top:0; left:-200px; transition:0.3s; padding-top:60px; }
+.menu { background:black; color:white; padding:15px; font-size:26px; cursor:pointer; position:fixed; top:0; left:0; width:100%; z-index:10; }
+.sidebar { width:200px; height:100vh; background:#222; position:fixed; top:0; left:-200px; transition:0.3s; padding-top:60px; z-index:9; }
 .sidebar a { display:block; padding:12px; color:white; text-decoration:none; font-size:18px; }
 .sidebar a:hover { background:#444; }
-.section { margin-top:90px; }
-.box { padding:12px; margin-bottom:10px; border-radius:8px; background:#eee; border-left:6px solid #666; color:black; }
+
+.section { margin-top:90px; margin-left:20px; } /* left shift for sidebar */
+.tab { margin-bottom: 15px; }
+.tab button { margin-right:5px; padding:8px 12px; border:none; border-radius:6px; cursor:pointer; }
+.tab button.active { background:black; color:white; }
+.box { padding:12px; margin-bottom:10px; border-radius:8px; background:#eee; border-left:6px solid #666; color:black; display:flex; justify-content: space-between; align-items: center; }
+
+.assign-buttons button { margin-left:5px; padding:4px 6px; border:none; border-radius:4px; cursor:pointer; }
+
 </style>
 </head>
 <body>
@@ -26,24 +33,99 @@ body { font-family: Arial, sans-serif; margin:20px; }
 <div class="section">
 <h2>Assignments</h2>
 
-<div class="box"><b>Math:</b> 2 assignments<br>Due: 11/23/2025 12PM</div>
-<div class="box"><b>ELA:</b> 3 assignments<br>Due: 11/23/2025 12PM</div>
-<div class="box"><b>Science:</b> 0 assignments<br>Due: 11/23/2025 12PM</div>
+<div class="tab">
+  <button class="active" onclick="showTab('active')">Active</button>
+  <button onclick="showTab('done')">Done</button>
+  <button onclick="showTab('missing')">Missing</button>
+</div>
+
+<div id="activeTab"></div>
+<div id="doneTab" style="display:none;"></div>
+<div id="missingTab" style="display:none;"></div>
+
 </div>
 
 <script>
 let currentUser = sessionStorage.getItem("currentUser");
 if(!currentUser){ alert("Not logged in"); window.location.href="index.html"; }
 
-function toggleMenu() {
-  let bar=document.getElementById("side");
-  bar.style.left=(bar.style.left==="0px")?"-200px":"0px";
+let assignmentsKey = "assignments_" + currentUser;
+
+// Default assignments if none exist
+if(!localStorage.getItem(assignmentsKey)){
+    localStorage.setItem(assignmentsKey, JSON.stringify([
+        {subject:"Math", name:"Homework 1", due:"11/23/2025 12PM", status:"active"},
+        {subject:"ELA", name:"Essay", due:"11/23/2025 12PM", status:"active"},
+        {subject:"Science", name:"Lab", due:"11/23/2025 12PM", status:"active"}
+    ]));
+}
+
+let assignments = JSON.parse(localStorage.getItem(assignmentsKey));
+
+function saveAssignments(){ localStorage.setItem(assignmentsKey, JSON.stringify(assignments)); }
+
+function renderAssignments(){
+    let activeTab = document.getElementById("activeTab");
+    let doneTab = document.getElementById("doneTab");
+    let missingTab = document.getElementById("missingTab");
+    activeTab.innerHTML=""; doneTab.innerHTML=""; missingTab.innerHTML="";
+
+    assignments.forEach((a,i)=>{
+        let box = document.createElement("div");
+        box.className="box";
+        box.innerHTML=`<div><b>${a.subject}:</b> ${a.name}<br>Due: ${a.due}</div>`;
+
+        let buttons = document.createElement("div");
+        buttons.className="assign-buttons";
+
+        if(a.status==="active"){
+            let doneBtn=document.createElement("button");
+            doneBtn.innerText="Mark Done";
+            doneBtn.onclick=()=>{ a.status="done"; saveAssignments(); renderAssignments(); };
+            let missBtn=document.createElement("button");
+            missBtn.innerText="Mark Missing";
+            missBtn.onclick=()=>{ a.status="missing"; saveAssignments(); renderAssignments(); };
+            buttons.appendChild(doneBtn);
+            buttons.appendChild(missBtn);
+            activeTab.appendChild(box);
+        } else if(a.status==="done"){
+            let delBtn=document.createElement("button");
+            delBtn.innerText="Delete";
+            delBtn.onclick=()=>{
+                if(confirm("Are you sure you want to DELETE this assignment forever?")){
+                    assignments.splice(i,1); saveAssignments(); renderAssignments();
+                }
+            };
+            buttons.appendChild(delBtn);
+            doneTab.appendChild(box);
+        } else if(a.status==="missing"){
+            missingTab.appendChild(box);
+        }
+
+        box.appendChild(buttons);
+    });
+}
+
+renderAssignments();
+
+function showTab(tab){
+    document.getElementById("activeTab").style.display=(tab==="active")?"block":"none";
+    document.getElementById("doneTab").style.display=(tab==="done")?"block":"none";
+    document.getElementById("missingTab").style.display=(tab==="missing")?"block":"none";
+
+    document.querySelectorAll(".tab button").forEach(b=>b.classList.remove("active"));
+    document.querySelector(`.tab button[onclick="showTab('${tab}')"]`).classList.add("active");
+}
+
+// Sidebar toggle & auto-collapse
+function toggleMenu(){
+    let bar=document.getElementById("side");
+    bar.style.left=(bar.style.left==="0px")?"-200px":"0px";
 }
 function closeMenu(){ document.getElementById("side").style.left="-200px"; }
-document.querySelectorAll('#side a').forEach(link => link.addEventListener('click', closeMenu));
-
+document.querySelectorAll('#side a').forEach(link=>link.addEventListener('click', closeMenu));
 function logout(){ sessionStorage.removeItem("currentUser"); window.location.href="index.html"; }
-</script>
 
+</script>
 </body>
 </html>
