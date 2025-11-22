@@ -2,78 +2,36 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Homework Tracker</title>
+  <title>Login</title>
   <style>
     body {
-      margin: 0;
-      font-family: Arial;
       background: #111;
       color: white;
-    }
-
-    /* Sidebar button */
-    .menu-btn {
-      font-size: 30px;
-      padding: 10px;
-      cursor: pointer;
-      background: #222;
-      color: white;
-      width: 50px;
+      font-family: Arial;
       text-align: center;
+      padding-top: 80px;
     }
-
-    /* Sidebar */
-    #sidebar {
-      position: fixed;
-      top: 0;
-      left: -200px;
-      width: 200px;
-      height: 100%;
+    .box {
       background: #222;
-      padding-top: 20px;
-      transition: 0.3s;
-    }
-
-    #sidebar a {
-      display: block;
-      padding: 15px;
-      color: white;
-      text-decoration: none;
-    }
-
-    #sidebar a:hover {
-      background: #444;
-    }
-
-    h1 {
-      text-align: center;
-      padding-top: 20px;
-    }
-
-    .section {
-      display: none;
       padding: 20px;
+      border-radius: 10px;
+      width: 300px;
+      margin: auto;
+      box-shadow: 0 0 10px #000;
     }
-
-    .assignment {
-      background: #222;
-      padding: 10px;
-      margin: 10px 0;
-      border-radius: 8px;
-    }
-
-    input, select {
-      padding: 10px;
+    input {
       width: 90%;
+      padding: 10px;
       margin: 8px;
       border-radius: 5px;
       border: none;
     }
-
     button {
+      width: 95%;
       padding: 10px;
-      border-radius: 5px;
+      margin-top: 10px;
       border: none;
+      border-radius: 5px;
       background: #00aaff;
       color: black;
       font-weight: bold;
@@ -83,121 +41,55 @@
 </head>
 <body>
 
-<div class="menu-btn" onclick="toggleSidebar()">☰</div>
+<h1>Homework Tracker Login</h1>
 
-<div id="sidebar">
-  <a onclick="switchPage('homeSection')">Home</a>
-  <a onclick="switchPage('assignSection')">Assignments</a>
-  <a onclick="logout()">Logout</a>
-</div>
+<div class="box">
+  <h2>Login</h2>
 
-<h1 id="pageTitle">Homework Tracker MVP</h1>
+  <input id="user" placeholder="Username">
+  <input id="pass" type="password" placeholder="Password">
 
-<!-- HOME -->
-<div id="homeSection" class="section" style="display:block;">
-  <h2>Welcome!</h2>
-  <p>This is your homework dashboard.</p>
-</div>
-
-<!-- ASSIGNMENTS -->
-<div id="assignSection" class="section">
-  <h2>Your Assignments</h2>
-
-  <input id="classInput" placeholder="Class (Math, ELA...)">
-  <input id="descInput" placeholder="Assignment description">
-  <button onclick="addAssignment()">Add Assignment</button>
-
-  <h3>Active Assignments</h3>
-  <div id="activeList"></div>
-
-  <h3>Completed Assignments</h3>
-  <div id="doneList"></div>
+  <button onclick="login()">Login</button>
+  <button onclick="create()">Create Account</button>
 </div>
 
 <script>
-  let currentUser = localStorage.getItem("currentUser");
-  if(!currentUser) {
-    alert("No user logged in — redirecting.");
-    window.location.href = "login.html";
+  function create() {
+    const user = document.getElementById("user").value.trim();
+    const pass = document.getElementById("pass").value.trim();
+
+    if (!user || !pass) return alert("Enter username + password");
+
+    if (localStorage.getItem("user_" + user)) {
+      return alert("User already exists!");
+    }
+
+    const data = {
+      password: pass,
+      assignments: []
+    };
+
+    localStorage.setItem("user_" + user, JSON.stringify(data));
+    alert("Account created!");
   }
 
-  function toggleSidebar(){
-    let bar = document.getElementById("sidebar");
-    bar.style.left = bar.style.left === "0px" ? "-200px" : "0px";
+  function login() {
+    const user = document.getElementById("user").value.trim();
+    const pass = document.getElementById("pass").value.trim();
+
+    const stored = localStorage.getItem("user_" + user);
+    if (!stored) return alert("User does not exist.");
+
+    const data = JSON.parse(stored);
+
+    if (data.password !== pass) return alert("Wrong password.");
+
+    localStorage.setItem("currentUser", user);
+
+    setTimeout(() => {
+      window.location.href = "home.html";
+    }, 200);
   }
-
-  function switchPage(pageID){
-    document.querySelectorAll(".section").forEach(sec => sec.style.display = "none");
-    document.getElementById(pageID).style.display = "block";
-
-    document.getElementById("pageTitle").innerText =
-      pageID === "assignSection" ? "Assignments" : "Homework Tracker MVP";
-  }
-
-  function logout(){
-    localStorage.removeItem("currentUser");
-    window.location.href = "login.html";
-  }
-
-  function loadAssignments(){
-    const data = JSON.parse(localStorage.getItem("user_" + currentUser));
-    const active = data.assignments.filter(a => !a.done);
-    const done = data.assignments.filter(a => a.done);
-
-    document.getElementById("activeList").innerHTML = "";
-    document.getElementById("doneList").innerHTML = "";
-
-    active.forEach((a,i)=>{
-      document.getElementById("activeList").innerHTML += `
-        <div class="assignment">
-          <b>${a.class}</b>: ${a.desc} <br>
-          Due: ${a.due}
-          <br>
-          <button onclick="markDone(${i})">Mark Done</button>
-        </div>
-      `;
-    });
-
-    done.forEach(a=>{
-      document.getElementById("doneList").innerHTML += `
-        <div class="assignment">
-          <b>${a.class}</b>: ${a.desc} <br>
-          <i>Completed</i>
-        </div>
-      `;
-    });
-  }
-
-  function addAssignment(){
-    const cls = document.getElementById("classInput").value.trim();
-    const desc = document.getElementById("descInput").value.trim();
-    const due = "11/23/2025 12PM";
-
-    if(!cls || !desc) return alert("Fill in both fields");
-
-    const data = JSON.parse(localStorage.getItem("user_" + currentUser));
-    data.assignments.push({
-      class: cls,
-      desc: desc,
-      due: due,
-      done: false
-    });
-
-    localStorage.setItem("user_" + currentUser, JSON.stringify(data));
-
-    loadAssignments();
-  }
-
-  function markDone(i){
-    const data = JSON.parse(localStorage.getItem("user_" + currentUser));
-    data.assignments[i].done = true;
-
-    localStorage.setItem("user_" + currentUser, JSON.stringify(data));
-
-    loadAssignments();
-  }
-
-  loadAssignments();
 </script>
 
 </body>
