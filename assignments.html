@@ -17,12 +17,11 @@ body { font-family: Arial, sans-serif; margin:20px; }
 .box { padding:12px; margin-bottom:10px; border-radius:8px; background:#eee; border-left:6px solid #666; color:black; display:flex; justify-content: space-between; align-items: center; }
 
 .assign-buttons button { margin-left:5px; padding:4px 6px; border:none; border-radius:4px; cursor:pointer; }
-
 </style>
 </head>
 <body>
 
-<div class="menu" onclick="toggleMenu()">☰</div>
+<div class="menu">☰</div>
 
 <div id="side" class="sidebar">
   <a href="home.html">Home</a>
@@ -34,9 +33,9 @@ body { font-family: Arial, sans-serif; margin:20px; }
 <h2>Assignments</h2>
 
 <div class="tab">
-  <button class="active" onclick="showTab('active')">Active</button>
-  <button onclick="showTab('done')">Done</button>
-  <button onclick="showTab('missing')">Missing</button>
+  <button class="active" data-tab="active">Active</button>
+  <button data-tab="done">Done</button>
+  <button data-tab="missing">Missing</button>
 </div>
 
 <div id="activeTab"></div>
@@ -46,86 +45,91 @@ body { font-family: Arial, sans-serif; margin:20px; }
 </div>
 
 <script>
-let currentUser = sessionStorage.getItem("currentUser");
-if(!currentUser){ alert("Not logged in"); window.location.href="index.html"; }
+window.onload = function() {
+    // SESSION CHECK
+    let currentUser = sessionStorage.getItem("currentUser");
+    if(!currentUser){ alert("Not logged in"); window.location.href="index.html"; return; }
 
-let assignmentsKey = "assignments_" + currentUser;
+    let assignmentsKey = "assignments_" + currentUser;
 
-// Default assignments if none exist
-if(!localStorage.getItem(assignmentsKey)){
-    localStorage.setItem(assignmentsKey, JSON.stringify([
-        {subject:"Math", name:"Homework 1", due:"11/23/2025 12PM", status:"active"},
-        {subject:"ELA", name:"Essay", due:"11/23/2025 12PM", status:"active"},
-        {subject:"Science", name:"Lab", due:"11/23/2025 12PM", status:"active"}
-    ]));
-}
+    // DEFAULT ASSIGNMENTS IF NONE EXIST
+    if(!localStorage.getItem(assignmentsKey)){
+        localStorage.setItem(assignmentsKey, JSON.stringify([
+            {subject:"Math", name:"Homework 1", due:"11/23/2025 12PM", status:"active"},
+            {subject:"ELA", name:"Essay", due:"11/23/2025 12PM", status:"active"},
+            {subject:"Science", name:"Lab", due:"11/23/2025 12PM", status:"active"}
+        ]));
+    }
 
-let assignments = JSON.parse(localStorage.getItem(assignmentsKey));
+    let assignments = JSON.parse(localStorage.getItem(assignmentsKey));
 
-function saveAssignments(){ localStorage.setItem(assignmentsKey, JSON.stringify(assignments)); }
+    function saveAssignments(){ localStorage.setItem(assignmentsKey, JSON.stringify(assignments)); }
 
-function renderAssignments(){
-    let activeTab = document.getElementById("activeTab");
-    let doneTab = document.getElementById("doneTab");
-    let missingTab = document.getElementById("missingTab");
-    activeTab.innerHTML=""; doneTab.innerHTML=""; missingTab.innerHTML="";
+    function renderAssignments(){
+        let activeTab = document.getElementById("activeTab");
+        let doneTab = document.getElementById("doneTab");
+        let missingTab = document.getElementById("missingTab");
+        activeTab.innerHTML=""; doneTab.innerHTML=""; missingTab.innerHTML="";
 
-    assignments.forEach((a,i)=>{
-        let box = document.createElement("div");
-        box.className="box";
-        box.innerHTML=`<div><b>${a.subject}:</b> ${a.name}<br>Due: ${a.due}</div>`;
+        assignments.forEach((a,i)=>{
+            let box = document.createElement("div");
+            box.className="box";
+            box.innerHTML=`<div><b>${a.subject}:</b> ${a.name}<br>Due: ${a.due}</div>`;
 
-        let buttons = document.createElement("div");
-        buttons.className="assign-buttons";
+            let buttons = document.createElement("div");
+            buttons.className="assign-buttons";
 
-        if(a.status==="active"){
-            let doneBtn=document.createElement("button");
-            doneBtn.innerText="Mark Done";
-            doneBtn.onclick=()=>{ a.status="done"; saveAssignments(); renderAssignments(); };
-            let missBtn=document.createElement("button");
-            missBtn.innerText="Mark Missing";
-            missBtn.onclick=()=>{ a.status="missing"; saveAssignments(); renderAssignments(); };
-            buttons.appendChild(doneBtn);
-            buttons.appendChild(missBtn);
-            activeTab.appendChild(box);
-        } else if(a.status==="done"){
-            let delBtn=document.createElement("button");
-            delBtn.innerText="Delete";
-            delBtn.onclick=()=>{
-                if(confirm("Are you sure you want to DELETE this assignment forever?")){
-                    assignments.splice(i,1); saveAssignments(); renderAssignments();
-                }
-            };
-            buttons.appendChild(delBtn);
-            doneTab.appendChild(box);
-        } else if(a.status==="missing"){
-            missingTab.appendChild(box);
-        }
+            if(a.status==="active"){
+                let doneBtn=document.createElement("button");
+                doneBtn.innerText="Mark Done";
+                doneBtn.onclick=()=>{ a.status="done"; saveAssignments(); renderAssignments(); };
+                let missBtn=document.createElement("button");
+                missBtn.innerText="Mark Missing";
+                missBtn.onclick=()=>{ a.status="missing"; saveAssignments(); renderAssignments(); };
+                buttons.appendChild(doneBtn);
+                buttons.appendChild(missBtn);
+                activeTab.appendChild(box);
+            } else if(a.status==="done"){
+                let delBtn=document.createElement("button");
+                delBtn.innerText="Delete";
+                delBtn.onclick=()=>{
+                    if(confirm("Are you sure you want to DELETE this assignment forever?")){
+                        assignments.splice(i,1); saveAssignments(); renderAssignments();
+                    }
+                };
+                buttons.appendChild(delBtn);
+                doneTab.appendChild(box);
+            } else if(a.status==="missing"){
+                missingTab.appendChild(box);
+            }
 
-        box.appendChild(buttons);
+            box.appendChild(buttons);
+        });
+    }
+
+    renderAssignments();
+
+    // TAB SWITCHING
+    document.querySelectorAll(".tab button").forEach(b=>{
+        b.addEventListener("click", function(){
+            let tab = this.getAttribute("data-tab");
+            document.getElementById("activeTab").style.display=(tab==="active")?"block":"none";
+            document.getElementById("doneTab").style.display=(tab==="done")?"block":"none";
+            document.getElementById("missingTab").style.display=(tab==="missing")?"block":"none";
+
+            document.querySelectorAll(".tab button").forEach(btn=>btn.classList.remove("active"));
+            this.classList.add("active");
+        });
     });
+
+    // SIDEBAR
+    let sidebar = document.getElementById("side");
+    document.querySelector(".menu").addEventListener('click', ()=>{ sidebar.style.left = (sidebar.style.left==="0px")?"-200px":"0px"; });
+    document.querySelectorAll('#side a').forEach(link=>link.addEventListener('click', ()=>{ sidebar.style.left="-200px"; }));
+
+    // LOGOUT FUNCTION
+    window.logout = function(){ sessionStorage.removeItem("currentUser"); window.location.href="index.html"; }
 }
-
-renderAssignments();
-
-function showTab(tab){
-    document.getElementById("activeTab").style.display=(tab==="active")?"block":"none";
-    document.getElementById("doneTab").style.display=(tab==="done")?"block":"none";
-    document.getElementById("missingTab").style.display=(tab==="missing")?"block":"none";
-
-    document.querySelectorAll(".tab button").forEach(b=>b.classList.remove("active"));
-    document.querySelector(`.tab button[onclick="showTab('${tab}')"]`).classList.add("active");
-}
-
-// Sidebar toggle & auto-collapse
-function toggleMenu(){
-    let bar=document.getElementById("side");
-    bar.style.left=(bar.style.left==="0px")?"-200px":"0px";
-}
-function closeMenu(){ document.getElementById("side").style.left="-200px"; }
-document.querySelectorAll('#side a').forEach(link=>link.addEventListener('click', closeMenu));
-function logout(){ sessionStorage.removeItem("currentUser"); window.location.href="index.html"; }
-
 </script>
 </body>
 </html>
