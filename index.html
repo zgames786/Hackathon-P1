@@ -1,95 +1,104 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Login</title>
-  <style>
-    body {
-      background: #111;
-      color: white;
-      font-family: Arial;
-      text-align: center;
-      padding-top: 80px;
-    }
-    .box {
-      background: #222;
-      padding: 20px;
-      border-radius: 10px;
-      width: 300px;
-      margin: auto;
-      box-shadow: 0 0 10px #000;
-    }
-    input {
-      width: 90%;
-      padding: 10px;
-      margin: 8px;
-      border-radius: 5px;
-      border: none;
-    }
-    button {
-      width: 95%;
-      padding: 10px;
-      margin-top: 10px;
-      border: none;
-      border-radius: 5px;
-      background: #00aaff;
-      color: black;
-      font-weight: bold;
-      cursor: pointer;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <title>Login</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f2f2f2;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .box {
+            background: white;
+            padding: 25px;
+            width: 300px;
+            border-radius: 12px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.15);
+            text-align: center;
+        }
+
+        input {
+            width: 90%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+        }
+
+        button {
+            width: 95%;
+            padding: 10px;
+            background: black;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            opacity: 0.85;
+        }
+
+        #error {
+            color: red;
+            margin-top: 10px;
+        }
+    </style>
 </head>
+
 <body>
 
-<h1>Homework Tracker Login</h1>
-
 <div class="box">
-  <h2>Login</h2>
+    <h2>Login</h2>
 
-  <input id="user" placeholder="Username">
-  <input id="pass" type="password" placeholder="Password">
+    <input id="user" placeholder="Username">
+    <input id="pass" placeholder="Password" type="password">
 
-  <button onclick="login()">Login</button>
-  <button onclick="create()">Create Account</button>
+    <button onclick="login()">Login</button>
+
+    <hr style="margin: 15px 0;">
+    <h3>Create Account</h3>
+
+    <input id="newuser" placeholder="New username">
+    <input id="newpass" placeholder="New password" type="password">
+
+    <button onclick="createAccount()">Create Account</button>
+
+    <p id="error"></p>
 </div>
 
 <script>
-  function create() {
-    const user = document.getElementById("user").value.trim();
-    const pass = document.getElementById("pass").value.trim();
+    function createAccount() {
+        let user = document.getElementById("newuser").value;
+        let pass = document.getElementById("newpass").value;
 
-    if (!user || !pass) return alert("Enter username + password");
+        if (!user || !pass) {
+            document.getElementById("error").innerText = "Enter username & password.";
+            return;
+        }
 
-    if (localStorage.getItem("user_" + user)) {
-      return alert("User already exists!");
+        localStorage.setItem("user_" + user, pass);
+        document.getElementById("error").innerText = "Account created!";
     }
 
-    const data = {
-      password: pass,
-      assignments: []
-    };
+    function login() {
+        let user = document.getElementById("user").value;
+        let pass = document.getElementById("pass").value;
 
-    localStorage.setItem("user_" + user, JSON.stringify(data));
-    alert("Account created!");
-  }
+        let stored = localStorage.getItem("user_" + user);
 
-  function login() {
-    const user = document.getElementById("user").value.trim();
-    const pass = document.getElementById("pass").value.trim();
-
-    const stored = localStorage.getItem("user_" + user);
-    if (!stored) return alert("User does not exist.");
-
-    const data = JSON.parse(stored);
-
-    if (data.password !== pass) return alert("Wrong password.");
-
-    localStorage.setItem("currentUser", user);
-
-    setTimeout(() => {
-      window.location.href = "home.html";
-    }, 200);
-  }
+        if (stored === pass) {
+            localStorage.setItem("currentUser", user);
+            window.location.href = "home.html";
+        } else {
+            document.getElementById("error").innerText = "Incorrect login.";
+        }
+    }
 </script>
 
 </body>
