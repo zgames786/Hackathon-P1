@@ -3,32 +3,163 @@
 <head>
   <title>Homework Tracker MVP</title>
   <style>
-    body { font-family: Arial; padding: 20px; }
-    #assignments div { margin-bottom: 5px; }
+    body { font-family: Arial; margin: 0; padding: 0; }
+    
+    /* Sidebar */
+    #sidebar {
+      height: 100%;
+      width: 0;
+      position: fixed;
+      top: 0;
+      left: 0;
+      background-color: #111;
+      overflow-x: hidden;
+      transition: 0.3s;
+      padding-top: 60px;
+    }
+
+    #sidebar a {
+      padding: 10px 20px;
+      text-decoration: none;
+      font-size: 20px;
+      color: white;
+      display: block;
+      transition: 0.2s;
+    }
+
+    #sidebar a:hover { background-color: #575757; }
+
+    /* Hamburger button */
+    #hamburger {
+      font-size: 30px;
+      cursor: pointer;
+      padding: 10px 20px;
+      background-color: #111;
+      color: white;
+      position: fixed;
+      top: 0;
+      left: 0;
+    }
+
+    /* Pages */
+    .page { display: none; padding: 20px; }
+    #homePage { background-color: black; color: white; height: 100vh; display: block; }
+    #assignmentsPage { display: none; }
+
+    /* Tabs in assignments */
+    .tab-button { margin-right: 10px; padding: 5px 10px; cursor: pointer; }
+    .tab-button.active { background-color: #007bff; color: white; }
+    .assignment { margin-bottom: 5px; }
+    .hidden { display: none; }
+    input, button { margin: 5px 0; }
   </style>
 </head>
 <body>
-  <h1>Homework Tracker MVP</h1>
 
-  <input id="classInput" placeholder="Class">
-  <input id="assignmentInput" placeholder="Assignment">
-  <button onclick="addAssignment()">Add Assignment</button>
+  <!-- Hamburger button -->
+  <div id="hamburger" onclick="toggleSidebar()">☰</div>
 
-  <h2>Assignments</h2>
-  <div id="assignments"></div>
+  <!-- Sidebar -->
+  <div id="sidebar">
+    <a href="#" onclick="showPage('home')">Home</a>
+    <a href="#" onclick="showPage('assignments')">Assignments</a>
+  </div>
+
+  <!-- Home page -->
+  <div id="homePage" class="page">
+    <h1>Welcome to Homework Tracker MVP</h1>
+  </div>
+
+  <!-- Assignments page -->
+  <div id="assignmentsPage" class="page">
+
+    <h1>Homework Tracker MVP</h1>
+
+    <input id="classInput" placeholder="Class">
+    <input id="assignmentInput" placeholder="Assignment">
+    <button onclick="addAssignment()">Add Assignment</button>
+
+    <div style="margin-top:20px;">
+      <button class="tab-button active" onclick="showTab('active')">Active</button>
+      <button class="tab-button" onclick="showTab('done')">Done</button>
+      <button class="tab-button" onclick="showTab('missing')">Missing</button>
+    </div>
+
+    <div id="activeTab">
+      <h2>Active Assignments</h2>
+      <div id="activeAssignments"></div>
+    </div>
+    <div id="doneTab" class="hidden">
+      <h2>Done Assignments</h2>
+      <div id="doneAssignments"></div>
+    </div>
+    <div id="missingTab" class="hidden">
+      <h2>Missing Assignments</h2>
+      <div id="missingAssignments"></div>
+    </div>
+
+  </div>
 
   <script>
+    const dueDate = "11/23/2025 12PM";
+
+    // Sidebar toggle
+    function toggleSidebar() {
+      const sidebar = document.getElementById("sidebar");
+      if (sidebar.style.width === "200px") {
+        sidebar.style.width = "0";
+      } else {
+        sidebar.style.width = "200px";
+      }
+    }
+
+    // Page navigation
+    function showPage(page) {
+      document.getElementById("homePage").style.display = "none";
+      document.getElementById("assignmentsPage").style.display = "none";
+
+      if (page === "home") document.getElementById("homePage").style.display = "block";
+      if (page === "assignments") document.getElementById("assignmentsPage").style.display = "block";
+
+      toggleSidebar(); // close sidebar after selection
+    }
+
+    // Tabs inside assignments
+    function showTab(tab) {
+      document.getElementById("activeTab").classList.add("hidden");
+      document.getElementById("doneTab").classList.add("hidden");
+      document.getElementById("missingTab").classList.add("hidden");
+
+      document.getElementById(tab + "Tab").classList.remove("hidden");
+
+      document.querySelectorAll(".tab-button").forEach(b => b.classList.remove("active"));
+      document.querySelector(`.tab-button[onclick="showTab('${tab}')"]`).classList.add("active");
+    }
+
+    // Assignments
     function addAssignment() {
       let cls = document.getElementById("classInput").value;
       let asn = document.getElementById("assignmentInput").value;
 
       if (cls && asn) {
-        let item = document.createElement("div");
-        item.textContent = cls + ": " + asn;
-        document.getElementById("assignments").appendChild(item);
+        let div = document.createElement("div");
+        div.className = "assignment";
+        div.innerHTML = `${cls}: ${asn} | Due: ${dueDate} 
+          <button onclick="markDone(this)">Done</button>
+          <button onclick="markMissing(this)">Missing</button>`;
+        document.getElementById("activeAssignments").appendChild(div);
       }
+    }
+
+    function markDone(button) {
+      let div = button.parentElement;
+      document.getElementById("doneAssignments").appendChild(div);
+    }
+
+    function markMissing(button) {
+      let div = button.parentElement;
+      document.getElementById("missingAssignments").appendChild(div);
     }
   </script>
 </body>
 </html>
-    
