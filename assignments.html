@@ -67,7 +67,7 @@ window.onload=function(){
     for(let key in localStorage){
         if(key.startsWith("class_")){
             let c=JSON.parse(localStorage.getItem(key));
-            if(currentType==="student" && c.students.includes(currentUser)) classes.push(key);
+            if(currentType==="student" && c.students && c.students.includes(currentUser)) classes.push(key);
             if(currentType==="teacher" && c.teacher===currentUser) classes.push(key);
         }
     }
@@ -76,11 +76,19 @@ window.onload=function(){
     if(currentType==="teacher"){
         classSelectArea.innerHTML='<select id="classSelect"><option value="">Select class</option></select> <button onclick="addAssignment()">Add Assignment</button>';
         let select=document.getElementById("classSelect");
-        classes.forEach(c=>{ select.innerHTML+=`<option value="${c}">${JSON.parse(localStorage.getItem(c)).name} (${c.replace("class_","")})</option>`; });
+        classes.forEach(c=>{ 
+            let classData=JSON.parse(localStorage.getItem(c));
+            if(!classData) return;
+            select.innerHTML+=`<option value="${c}">${classData.name} (${c.replace("class_","")})</option>`; 
+        });
     } else {
         classSelectArea.innerHTML='<select id="classSelect"><option value="">Select class</option></select>';
         let select=document.getElementById("classSelect");
-        classes.forEach(c=>{ select.innerHTML+=`<option value="${c}">${JSON.parse(localStorage.getItem(c)).name} (${c.replace("class_","")})</option>`; });
+        classes.forEach(c=>{ 
+            let classData=JSON.parse(localStorage.getItem(c));
+            if(!classData) return;
+            select.innerHTML+=`<option value="${c}">${classData.name} (${c.replace("class_","")})</option>`; 
+        });
     }
 
     let assignments=[];
@@ -90,11 +98,13 @@ window.onload=function(){
         assignments=[];
         if(!select) return;
         let classData = JSON.parse(localStorage.getItem(select));
-        if(classData.assignments) assignments = classData.assignments.map(a=>{
+        if(!classData || !classData.assignments) return;
+        assignments = classData.assignments.map(a=>{
+            if(!a) return null;
             if(!a.statuses) a.statuses={};
-            if(!a.statuses[currentUser]) a.statuses[currentUser]="active";
+            if(currentType==="student" && !a.statuses[currentUser]) a.statuses[currentUser]="active";
             return a;
-        });
+        }).filter(a=>a!==null);
         renderAssignments();
     }
 
@@ -102,6 +112,7 @@ window.onload=function(){
         let select = document.getElementById("classSelect").value;
         if(!select) return;
         let classData = JSON.parse(localStorage.getItem(select));
+        if(!classData) return;
         classData.assignments = assignments;
         localStorage.setItem(select, JSON.stringify(classData));
         updateChart();
@@ -114,6 +125,7 @@ window.onload=function(){
         activeTab.innerHTML=""; doneTab.innerHTML=""; missingTab.innerHTML="";
 
         assignments.forEach((a,i)=>{
+            if(!a) return;
             let box=document.createElement("div");
             box.className="box";
             box.innerHTML=`<div><b>${a.subject}:</b> ${a.name}<br>Due: <span id="due_${i}">${a.due}</span></div>`;
@@ -136,7 +148,7 @@ window.onload=function(){
                 let editBtn=document.createElement("button"); editBtn.innerText="Change Due Date"; editBtn.onclick=()=>{ let newDue=prompt("New Due Date",a.due); if(newDue){ a.due=newDue; saveAssignments(); renderAssignments(); } };
                 let delBtn=document.createElement("button"); delBtn.innerText="Delete"; delBtn.onclick=()=>{ if(confirm("Delete assignment?")){ assignments.splice(i,1); saveAssignments(); renderAssignments(); } };
                 buttons.appendChild(editBtn); buttons.appendChild(delBtn);
-                activeTab.appendChild(box); // Only use one tab for teacher
+                activeTab.appendChild(box); // Only one tab for teacher
             }
 
             box.appendChild(buttons);
@@ -160,3 +172,34 @@ window.onload=function(){
     document.getElementById("classSelect").addEventListener("change", loadAssignments);
 
     // Tabs only for students
+    document.querySelectorAll(".tab button").forEach(btn=>{
+        btn.onclick=function(){
+            if(currentType==="teacher") return;
+            document.querySelectorAll(".tab button").forEach(b=>b.classList.remove("active"));
+            btn.classList.add("active");
+            document.getElementById("activeTab").style.display=(btn.dataset.tab==="active")?"block":"none";
+            document.getElementById("doneTab").style.display=(btn.dataset.tab==="done")?"block":"none";
+            document.getElementById("missingTab").style.display=(btn.dataset.tab==="missing")?"block":"none";
+        }
+    });
+
+    // Chart for student only
+    let chartCanvas=document.getElementById("progressChart");
+    let chart=null;
+    function updateChart(){
+        if(currentType==="teacher"){ chartCanvas.style.display="none"; return; }
+        let total=assignments.length;
+        let done=assignments.filter(a=>a.statuses[currentUser]==="done").length;
+        let missing=assignments.filter(a=>a.statuses[currentUser]==="missing").length;
+        let active=total-done-missing;
+        if(chart) chart.destroy();
+        chart=new Chart(chartCanvas,{
+            type:"doughnut",
+            data:{ labels:["Active","Done","Missing"], datasets:[{ data:[active,done,missing], backgroundColor:["#f0ad4e","#5cb85c","#d9534f"] }] }
+        });
+    }
+}
+</script>
+
+</body>
+</html>
