@@ -1,82 +1,67 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Login</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f2f2f2;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-    }
-    .box {
-      background: white;
-      padding: 25px;
-      width: 300px;
-      border-radius: 12px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.15);
-      text-align: center;
-    }
-    input {
-      width: 90%;
-      padding: 10px;
-      margin-bottom: 10px;
-      border-radius: 6px;
-      border: 1px solid #ccc;
-    }
-    button {
-      width: 95%;
-      padding: 10px;
-      background: black;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-    button:hover { opacity: 0.85; }
-    #error { color:red; margin-top:10px; }
-  </style>
+<meta charset="UTF-8">
+<title>Login / Create Account</title>
+<style>
+body { font-family: Arial, sans-serif; margin:50px; }
+input, button { margin:5px 0; padding:8px; }
+.type-select { margin:10px 0; }
+</style>
 </head>
 <body>
+<h1>Homework Tracker MVP</h1>
 
-<div class="box">
-  <h2>Login</h2>
-  <input id="user" placeholder="Username">
-  <input id="pass" type="password" placeholder="Password">
-  <button onclick="login()">Login</button>
-
-  <hr style="margin:15px 0;">
-  <h3>Create Account</h3>
-  <input id="newuser" placeholder="New username">
-  <input id="newpass" type="password" placeholder="New password">
-  <button onclick="createAccount()">Create Account</button>
-
-  <p id="error"></p>
-  <p>Or <a href="home.html">click here</a> to go to dashboard (manual fallback)</p>
+<h2>Create Account</h2>
+<div class="type-select">
+  <label><input type="radio" name="createType" value="student" checked> Student</label>
+  <label><input type="radio" name="createType" value="teacher"> Teacher</label>
 </div>
+<input type="text" id="createUsername" placeholder="Username"><br>
+<input type="password" id="createPassword" placeholder="Password"><br>
+<button onclick="createAccount()">Create Account</button>
+
+<h2>Login</h2>
+<div class="type-select">
+  <label><input type="radio" name="loginType" value="student" checked> Student</label>
+  <label><input type="radio" name="loginType" value="teacher"> Teacher</label>
+</div>
+<input type="text" id="loginUsername" placeholder="Username"><br>
+<input type="password" id="loginPassword" placeholder="Password"><br>
+<button onclick="login()">Login</button>
 
 <script>
-function createAccount() {
-  let user = document.getElementById("newuser").value.trim();
-  let pass = document.getElementById("newpass").value.trim();
-  if(!user || !pass){ document.getElementById("error").innerText="Enter username & password."; return;}
-  localStorage.setItem("user_" + user, pass);
-  document.getElementById("error").innerText="Account created!";
+function createAccount(){
+    let type = document.querySelector('input[name="createType"]:checked').value;
+    let username = document.getElementById("createUsername").value.trim();
+    let password = document.getElementById("createPassword").value.trim();
+    if(!username || !password){ alert("Fill in username and password"); return; }
+
+    let key = type + "_" + username;
+    if(localStorage.getItem(key)){ alert("Account already exists"); return; }
+
+    localStorage.setItem(key, JSON.stringify({password: password}));
+    alert(type.charAt(0).toUpperCase()+type.slice(1)+" account created!");
 }
 
-function login() {
-  let user = document.getElementById("user").value.trim();
-  let pass = document.getElementById("pass").value.trim();
-  let stored = localStorage.getItem("user_" + user);
-  if(stored === pass){
-    sessionStorage.setItem("currentUser", user);
-    window.location.href="home.html";
-  } else { document.getElementById("error").innerText="Incorrect login."; }
+function login(){
+    let type = document.querySelector('input[name="loginType"]:checked').value;
+    let username = document.getElementById("loginUsername").value.trim();
+    let password = document.getElementById("loginPassword").value.trim();
+    if(!username || !password){ alert("Fill in username and password"); return; }
+
+    let key = type + "_" + username;
+    let data = JSON.parse(localStorage.getItem(key));
+    if(!data){ alert("Account not found"); return; }
+    if(data.password !== password){ alert("Incorrect password"); return; }
+
+    // Save session
+    sessionStorage.setItem("currentUser", username);
+    sessionStorage.setItem("currentType", type);
+
+    // Redirect to home/dashboard
+    window.location.href = "home.html";
 }
 </script>
-
 </body>
 </html>
