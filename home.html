@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Home</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+        }
+
+        .menu {
+            background: black;
+            color: white;
+            padding: 15px;
+            font-size: 26px;
+            cursor: pointer;
+        }
+
+        .sidebar {
+            width: 220px;
+            height: 100vh;
+            background: #222;
+            position: fixed;
+            top: 0;
+            left: -220px;
+            transition: 0.3s;
+            padding-top: 60px;
+        }
+
+        .sidebar a {
+            display: block;
+            padding: 12px;
+            color: white;
+            text-decoration: none;
+            font-size: 18px;
+        }
+
+        .sidebar a:hover {
+            background: #444;
+        }
+
+        h1 {
+            padding: 20px;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="menu" onclick="toggleMenu()">☰</div>
+
+<div id="side" class="sidebar">
+    <a href="home.html">Home</a>
+    <a href="assignments.html">Assignments</a>
+</div>
+
+<h1>Homework Tracker MVP</h1>
+
+<script>
+    function toggleMenu() {
+        let bar = document.getElementById("side");
+        if (bar.style.left === "0px") {
+            bar.style.left = "-220px";
+        } else {
+            bar.style.left = "0px";
+        }
+    }
+</script>
+
+</body>
+</html>
