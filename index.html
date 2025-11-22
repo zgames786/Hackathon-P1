@@ -1,104 +1,81 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Login</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: #f2f2f2;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-        }
-
-        .box {
-            background: white;
-            padding: 25px;
-            width: 300px;
-            border-radius: 12px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.15);
-            text-align: center;
-        }
-
-        input {
-            width: 90%;
-            padding: 10px;
-            margin-bottom: 10px;
-            border-radius: 6px;
-            border: 1px solid #ccc;
-        }
-
-        button {
-            width: 95%;
-            padding: 10px;
-            background: black;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-        }
-
-        button:hover {
-            opacity: 0.85;
-        }
-
-        #error {
-            color: red;
-            margin-top: 10px;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title>Login</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f2f2f2;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .box {
+      background: white;
+      padding: 25px;
+      width: 300px;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.15);
+      text-align: center;
+    }
+    input {
+      width: 90%;
+      padding: 10px;
+      margin-bottom: 10px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+    button {
+      width: 95%;
+      padding: 10px;
+      background: black;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    button:hover { opacity: 0.85; }
+    #error { color:red; margin-top:10px; }
+  </style>
 </head>
-
 <body>
 
 <div class="box">
-    <h2>Login</h2>
+  <h2>Login</h2>
+  <input id="user" placeholder="Username">
+  <input id="pass" type="password" placeholder="Password">
+  <button onclick="login()">Login</button>
 
-    <input id="user" placeholder="Username">
-    <input id="pass" placeholder="Password" type="password">
+  <hr style="margin:15px 0;">
+  <h3>Create Account</h3>
+  <input id="newuser" placeholder="New username">
+  <input id="newpass" type="password" placeholder="New password">
+  <button onclick="createAccount()">Create Account</button>
 
-    <button onclick="login()">Login</button>
-
-    <hr style="margin: 15px 0;">
-    <h3>Create Account</h3>
-
-    <input id="newuser" placeholder="New username">
-    <input id="newpass" placeholder="New password" type="password">
-
-    <button onclick="createAccount()">Create Account</button>
-
-    <p id="error"></p>
+  <p id="error"></p>
+  <p>Or <a href="home.html">click here</a> to go to dashboard (manual fallback)</p>
 </div>
 
 <script>
-    function createAccount() {
-        let user = document.getElementById("newuser").value;
-        let pass = document.getElementById("newpass").value;
+function createAccount() {
+  let user = document.getElementById("newuser").value.trim();
+  let pass = document.getElementById("newpass").value.trim();
+  if(!user || !pass){ document.getElementById("error").innerText="Enter username & password."; return;}
+  localStorage.setItem("user_" + user, pass);
+  document.getElementById("error").innerText="Account created!";
+}
 
-        if (!user || !pass) {
-            document.getElementById("error").innerText = "Enter username & password.";
-            return;
-        }
-
-        localStorage.setItem("user_" + user, pass);
-        document.getElementById("error").innerText = "Account created!";
-    }
-
-    function login() {
-        let user = document.getElementById("user").value;
-        let pass = document.getElementById("pass").value;
-
-        let stored = localStorage.getItem("user_" + user);
-
-        if (stored === pass) {
-            localStorage.setItem("currentUser", user);
-            window.location.href = "home.html";
-        } else {
-            document.getElementById("error").innerText = "Incorrect login.";
-        }
-    }
+function login() {
+  let user = document.getElementById("user").value.trim();
+  let pass = document.getElementById("pass").value.trim();
+  let stored = localStorage.getItem("user_" + user);
+  if(stored === pass){
+    sessionStorage.setItem("currentUser", user);
+    window.location.href="home.html";
+  } else { document.getElementById("error").innerText="Incorrect login."; }
+}
 </script>
 
 </body>
