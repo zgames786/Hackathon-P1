@@ -1,100 +1,48 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Assignments</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-        }
-
-        .menu {
-            background: black;
-            color: white;
-            padding: 15px;
-            font-size: 26px;
-            cursor: pointer;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-        }
-
-        .sidebar {
-            width: 220px;
-            height: 100vh;
-            background: #222;
-            position: fixed;
-            top: 0;
-            left: -220px;
-            transition: 0.3s;
-            padding-top: 60px;
-        }
-
-        .sidebar a {
-            display: block;
-            padding: 12px;
-            color: white;
-            text-decoration: none;
-            font-size: 18px;
-        }
-
-        .sidebar a:hover {
-            background: #444;
-        }
-
-        .section {
-            margin-top: 90px;
-        }
-
-        .box {
-            padding: 12px;
-            margin-bottom: 10px;
-            border-radius: 8px;
-            background: #eee;
-            border-left: 6px solid #666;
-        }
-    </style>
+<meta charset="UTF-8">
+<title>Assignments</title>
+<style>
+body { font-family: Arial, sans-serif; margin:20px; }
+.menu { background:black; color:white; padding:15px; font-size:26px; cursor:pointer; position:fixed; top:0; left:0; width:100%; }
+.sidebar { width:200px; height:100vh; background:#222; position:fixed; top:0; left:-200px; transition:0.3s; padding-top:60px; }
+.sidebar a { display:block; padding:12px; color:white; text-decoration:none; font-size:18px; }
+.sidebar a:hover { background:#444; }
+.section { margin-top:90px; }
+.box { padding:12px; margin-bottom:10px; border-radius:8px; background:#eee; border-left:6px solid #666; color:black; }
+</style>
 </head>
-
 <body>
 
 <div class="menu" onclick="toggleMenu()">☰</div>
 
 <div id="side" class="sidebar">
-    <a href="home.html">Home</a>
-    <a href="assignments.html">Assignments</a>
+  <a href="home.html">Home</a>
+  <a href="assignments.html">Assignments</a>
+  <a href="#" onclick="logout()">Logout</a>
 </div>
 
 <div class="section">
-    <h2>Assignments</h2>
+<h2>Assignments</h2>
 
-    <div class="box">
-        <b>Math:</b> 2 assignments  
-        <br>Due: 11/23/2025 12PM
-    </div>
-
-    <div class="box">
-        <b>ELA:</b> 3 assignments  
-        <br>Due: 11/23/2025 12PM
-    </div>
-
-    <div class="box">
-        <b>Science:</b> 0 assignments  
-        <br>Due: 11/23/2025 12PM
-    </div>
+<div class="box"><b>Math:</b> 2 assignments<br>Due: 11/23/2025 12PM</div>
+<div class="box"><b>ELA:</b> 3 assignments<br>Due: 11/23/2025 12PM</div>
+<div class="box"><b>Science:</b> 0 assignments<br>Due: 11/23/2025 12PM</div>
 </div>
 
 <script>
-    function toggleMenu() {
-        let bar = document.getElementById("side");
-        if (bar.style.left === "0px") {
-            bar.style.left = "-220px";
-        } else {
-            bar.style.left = "0px";
-        }
-    }
+let currentUser = sessionStorage.getItem("currentUser");
+if(!currentUser){ alert("Not logged in"); window.location.href="index.html"; }
+
+function toggleMenu() {
+  let bar=document.getElementById("side");
+  bar.style.left=(bar.style.left==="0px")?"-200px":"0px";
+}
+function closeMenu(){ document.getElementById("side").style.left="-200px"; }
+document.querySelectorAll('#side a').forEach(link => link.addEventListener('click', closeMenu));
+
+function logout(){ sessionStorage.removeItem("currentUser"); window.location.href="index.html"; }
 </script>
 
 </body>
