@@ -1,127 +1,63 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<title>Homework Tracker MVP</title>
-<style>
-body {
-    font-family: Arial, sans-serif;
-    margin:0;
-    padding:0;
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    justify-content:center;
-    min-height:100vh;
-    background:#f0f0f0;
-}
-h1 {
-    font-size:50px;
-    margin-top:20px;
-}
-h2 {
-    font-size:24px;
-    margin-top:10px;
-}
-.role-container {
-    display:flex;
-    gap:50px;
-    margin-top:50px;
-}
-.role-box {
-    width:200px;
-    height:200px;
-    background:white;
-    border-radius:15px;
-    box-shadow:0 4px 10px rgba(0,0,0,0.2);
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    justify-content:center;
-    cursor:pointer;
-    transition:0.3s;
-}
-.role-box:hover {
-    transform:scale(1.05);
-    box-shadow:0 6px 15px rgba(0,0,0,0.3);
-}
-.role-box span {
-    font-size:50px;
-    margin-bottom:10px;
-}
-#loginForm {
-    display:none;
-    margin-top:50px;
-    background:white;
-    padding:20px;
-    border-radius:15px;
-    box-shadow:0 4px 10px rgba(0,0,0,0.2);
-    width:300px;
-    text-align:center;
-}
-input, button { width:90%; padding:8px; margin:5px 0; }
-</style>
-</head>
-<body>
-
-<h1>Homework Tracker MVP</h1>
-<h2>Welcome!</h2>
-
-<div class="role-container">
-    <div class="role-box" onclick="showForm('student')">
-        <span>📚</span>
-        <div>Student</div>
-    </div>
-    <div class="role-box" onclick="showForm('teacher')">
-        <span>✏️</span>
-        <div>Educator</div>
-    </div>
-</div>
-
-<div id="loginForm">
-    <h2 id="formTitle"></h2>
-    <input type="text" id="username" placeholder="Username"><br>
-    <input type="password" id="password" placeholder="Password"><br>
-    <button onclick="createAccount()">Create Account</button>
-    <button onclick="login()">Login</button>
-</div>
-
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-let selectedType = "";
+window.onload = function(){
+    let currentUser = sessionStorage.getItem("currentUser");
+    let currentType = sessionStorage.getItem("currentType");
+    if(!currentUser || !currentType){ alert("Not logged in"); window.location.href="index.html"; return; }
+    document.getElementById("welcomeText").innerText = "Welcome, "+currentUser;
 
-function showForm(type){
-    selectedType = type;
-    document.getElementById("formTitle").innerText = type.charAt(0).toUpperCase() + type.slice(1) + " Login / Create Account";
-    document.getElementById("loginForm").style.display = "block";
-}
+    // Only show chart for students
+    if(currentType !== "student"){
+        document.getElementById("progressChart").style.display="none";
+        return;
+    }
 
-function createAccount(){
-    let username = document.getElementById("username").value.trim();
-    let password = document.getElementById("password").value.trim();
-    if(!username || !password){ alert("Enter username and password"); return; }
+    // Gather all assignments from classes student is in
+    let assignments=[];
+    for(let key in localStorage){
+        if(key.startsWith("class_")){
+            let c=JSON.parse(localStorage.getItem(key));
+            if(c.students && c.students.includes(currentUser) && c.assignments){
+                assignments = assignments.concat(c.assignments.map(a=>{
+                    if(!a.statuses) a.statuses={};
+                    if(!a.statuses[currentUser]) a.statuses[currentUser]="active";
+                    return a;
+                }));
+            }
+        }
+    }
 
-    let key = selectedType + "_" + username.toLowerCase();
-    if(localStorage.getItem(key)){ alert("Account already exists"); return; }
+    let total = assignments.length;
+    let done = assignments.filter(a=>a.statuses[currentUser]==="done").length;
+    let missing = assignments.filter(a=>a.statuses[currentUser]==="missing").length;
+    let active = total - done - missing;
 
-    localStorage.setItem(key, JSON.stringify({password: password}));
-    alert(selectedType.charAt(0).toUpperCase()+selectedType.slice(1)+" account created!");
-}
+    // Convert to percentages
+    let activePercent = total ? Math.round((active/total)*100) : 0;
+    let donePercent = total ? Math.round((done/total)*100) : 0;
+    let missingPercent = total ? Math.round((missing/total)*100) : 0;
 
-function login(){
-    let username = document.getElementById("username").value.trim();
-    let password = document.getElementById("password").value.trim();
-    if(!username || !password){ alert("Enter username and password"); return; }
+    // Labels show both raw count and percent
+    let labels = [
+        `Active: ${active} (${activePercent}%)`,
+        `Done: ${done} (${donePercent}%)`,
+        `Missing: ${missing} (${missingPercent}%)`
+    ];
 
-    let key = selectedType + "_" + username.toLowerCase();
-    let data = JSON.parse(localStorage.getItem(key));
-    if(!data){ alert("Account not found"); return; }
-    if(data.password !== password){ alert("Incorrect password"); return; }
-
-    sessionStorage.setItem("currentUser", username);
-    sessionStorage.setItem("currentType", selectedType);
-
-    window.location.href = "home.html";
+    // Render chart
+    new Chart(document.getElementById("progressChart"),{
+        type:"doughnut",
+        data:{
+            labels: labels,
+            datasets:[{
+                data:[active,done,missing],
+                backgroundColor:["#f0ad4e","#5cb85c","#d9534f"]
+            }]
+        },
+        options:{
+            responsive:true,
+            plugins:{ legend:{ position:"bottom" } }
+        }
+    });
 }
 </script>
-</body>
-</html>
