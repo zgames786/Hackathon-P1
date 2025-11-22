@@ -86,7 +86,6 @@ window.onload=function(){
         if(!select) return;
         let classData = JSON.parse(localStorage.getItem(select));
         if(classData.assignments) assignments = classData.assignments.map(a=>{
-            // Student statuses
             if(!a.statuses) a.statuses={};
             if(!a.statuses[currentUser]) a.statuses[currentUser]="active";
             return a;
@@ -160,6 +159,18 @@ window.onload=function(){
     }
 
     document.getElementById("classSelect").addEventListener("change", loadAssignments);
+
+    // Tabs
+    document.querySelectorAll(".tab button").forEach(btn=>{
+        btn.addEventListener("click", ()=>{
+            document.querySelectorAll(".tab button").forEach(b=>b.classList.remove("active"));
+            btn.classList.add("active");
+            document.getElementById("activeTab").style.display=(btn.dataset.tab==="active")?"block":"none";
+            document.getElementById("doneTab").style.display=(btn.dataset.tab==="done")?"block":"none";
+            document.getElementById("missingTab").style.display=(btn.dataset.tab==="missing")?"block":"none";
+        });
+    });
+
 }
 </script>
 </body>
