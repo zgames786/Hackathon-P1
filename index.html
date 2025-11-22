@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Homework Tracker - Choose Role</title>
+<title>Homework Tracker MVP</title>
 <style>
 body {
     font-family: Arial, sans-serif;
@@ -15,14 +15,19 @@ body {
     min-height:100vh;
     background:#f0f0f0;
 }
-h1 { margin-top:20px; }
-
+h1 {
+    font-size:50px;
+    margin-top:20px;
+}
+h2 {
+    font-size:24px;
+    margin-top:10px;
+}
 .role-container {
     display:flex;
     gap:50px;
     margin-top:50px;
 }
-
 .role-box {
     width:200px;
     height:200px;
@@ -36,17 +41,14 @@ h1 { margin-top:20px; }
     cursor:pointer;
     transition:0.3s;
 }
-
 .role-box:hover {
     transform:scale(1.05);
     box-shadow:0 6px 15px rgba(0,0,0,0.3);
 }
-
 .role-box span {
     font-size:50px;
     margin-bottom:10px;
 }
-
 #loginForm {
     display:none;
     margin-top:50px;
@@ -57,13 +59,13 @@ h1 { margin-top:20px; }
     width:300px;
     text-align:center;
 }
-
 input, button { width:90%; padding:8px; margin:5px 0; }
 </style>
 </head>
 <body>
 
-<h1>Welcome to Homework Tracker</h1>
+<h1>Homework Tracker MVP</h1>
+<h2>Welcome!</h2>
 
 <div class="role-container">
     <div class="role-box" onclick="showForm('student')">
@@ -93,26 +95,24 @@ function showForm(type){
     document.getElementById("loginForm").style.display = "block";
 }
 
-// CREATE ACCOUNT
 function createAccount(){
     let username = document.getElementById("username").value.trim();
     let password = document.getElementById("password").value.trim();
     if(!username || !password){ alert("Enter username and password"); return; }
 
-    let key = selectedType + "_" + username;
+    let key = selectedType + "_" + username.toLowerCase();
     if(localStorage.getItem(key)){ alert("Account already exists"); return; }
 
     localStorage.setItem(key, JSON.stringify({password: password}));
     alert(selectedType.charAt(0).toUpperCase()+selectedType.slice(1)+" account created!");
 }
 
-// LOGIN
 function login(){
     let username = document.getElementById("username").value.trim();
     let password = document.getElementById("password").value.trim();
     if(!username || !password){ alert("Enter username and password"); return; }
 
-    let key = selectedType + "_" + username;
+    let key = selectedType + "_" + username.toLowerCase();
     let data = JSON.parse(localStorage.getItem(key));
     if(!data){ alert("Account not found"); return; }
     if(data.password !== password){ alert("Incorrect password"); return; }
