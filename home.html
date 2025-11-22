@@ -1,39 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<title>Homework Tracker MVP - Home</title>
-<style>
-body { font-family: Arial, sans-serif; margin:20px; }
-h1 { font-size:50px; margin-bottom:0; }
-h2 { font-size:26px; margin-top:0; margin-bottom:20px; }
-.menu { background:black; color:white; padding:15px; font-size:26px; cursor:pointer; position:fixed; top:0; left:0; width:100%; z-index:10; }
-.sidebar { width:200px; height:100vh; background:#222; position:fixed; top:0; left:-200px; transition:0.3s; padding-top:60px; z-index:9; }
-.sidebar a { display:block; padding:12px; color:white; text-decoration:none; font-size:18px; }
-.sidebar a:hover { background:#444; }
-.section { margin-top:90px; margin-left:20px; } 
-.class-box { background:#eee; padding:15px; margin:10px 0; border-radius:12px; cursor:pointer; }
-.class-box h3 { margin:0; }
-.class-code { font-size:14px; color:#555; }
-button,input { padding:8px 12px; margin:5px 0; }
-</style>
-</head>
-<body>
-
-<div class="menu">☰</div>
-<div id="side" class="sidebar">
-  <a href="home.html">Home</a>
-  <a href="assignments.html">Assignments</a>
-  <a href="#" onclick="logout()">Logout</a>
-</div>
-
-<div class="section">
-<h1>Homework Tracker MVP</h1>
-<h2 id="welcomeText"></h2>
-
-<div id="dashboardArea"></div>
-</div>
-
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 window.onload = function(){
     let currentUser = sessionStorage.getItem("currentUser");
@@ -41,86 +6,58 @@ window.onload = function(){
     if(!currentUser || !currentType){ alert("Not logged in"); window.location.href="index.html"; return; }
     document.getElementById("welcomeText").innerText = "Welcome, "+currentUser;
 
-    let sidebar = document.getElementById("side");
-    document.querySelector(".menu").addEventListener('click', ()=>{ sidebar.style.left = (sidebar.style.left==="0px")?"-200px":"0px"; });
-    document.querySelectorAll('#side a').forEach(link=>link.addEventListener('click', ()=>{ sidebar.style.left="-200px"; }));
-    window.logout = function(){ sessionStorage.clear(); window.location.href="index.html"; }
-
-    let dashboard = document.getElementById("dashboardArea");
-
-    if(currentType==="student"){
-        dashboard.innerHTML = `<input type="text" id="joinCode" placeholder="Enter Class Code"> <button onclick="joinClass()">Join Classroom</button>
-        <div id="joinedClasses"></div>`;
-        displayJoinedClasses();
-    } else if(currentType==="teacher"){
-        dashboard.innerHTML = `<button onclick="createClass()">Create Classroom</button>
-        <div id="createdClasses"></div>`;
-        displayCreatedClasses();
+    // Only show chart for students
+    if(currentType !== "student"){
+        document.getElementById("progressChart").style.display="none";
+        return;
     }
 
-    function generateCode(length){
-        let chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-        let code="";
-        for(let i=0;i<length;i++){ code+=chars.charAt(Math.floor(Math.random()*chars.length)); }
-        return code;
-    }
-
-    window.createClass=function(){
-        let code = generateCode(7);
-        let classObj = {teacher: currentUser, name:"New Class", students:[], assignments:[]};
-        localStorage.setItem("class_"+code, JSON.stringify(classObj));
-        displayCreatedClasses();
-        alert("Class created! Code: "+code);
-    }
-
-    function displayCreatedClasses(){
-        let div = document.getElementById("createdClasses");
-        div.innerHTML="";
-        for(let key in localStorage){
-            if(key.startsWith("class_")){
-                let c = JSON.parse(localStorage.getItem(key));
-                if(c.teacher===currentUser){
-                    let box = document.createElement("div");
-                    box.className="class-box";
-                    box.innerHTML=`<h3 contenteditable="true" onblur="editClassName('${key}', this.innerText)">${c.name}</h3><div class="class-code">Code: ${key.replace("class_","")}</div>`;
-                    div.appendChild(box);
-                }
+    // Gather all assignments from classes student is in
+    let assignments=[];
+    for(let key in localStorage){
+        if(key.startsWith("class_")){
+            let c=JSON.parse(localStorage.getItem(key));
+            if(c.students && c.students.includes(currentUser) && c.assignments){
+                assignments = assignments.concat(c.assignments.map(a=>{
+                    if(!a.statuses) a.statuses={};
+                    if(!a.statuses[currentUser]) a.statuses[currentUser]="active";
+                    return a;
+                }));
             }
         }
     }
 
-    window.editClassName=function(key,newName){
-        let c=JSON.parse(localStorage.getItem(key));
-        c.name=newName;
-        localStorage.setItem(key, JSON.stringify(c));
-    }
+    let total = assignments.length;
+    let done = assignments.filter(a=>a.statuses[currentUser]==="done").length;
+    let missing = assignments.filter(a=>a.statuses[currentUser]==="missing").length;
+    let active = total - done - missing;
 
-    window.joinClass = function(){
-        let code = document.getElementById("joinCode").value.trim().toUpperCase();
-        if(!code){ alert("Enter class code"); return; }
-        let classData = JSON.parse(localStorage.getItem("class_"+code));
-        if(!classData){ alert("Class not found"); return; }
-        if(!classData.students.includes(currentUser)){
-            classData.students.push(currentUser);
-            localStorage.setItem("class_"+code, JSON.stringify(classData));
-        }
-        alert("Joined class "+code);
-        displayJoinedClasses();
-    }
+    // Convert to percentages
+    let activePercent = total ? Math.round((active/total)*100) : 0;
+    let donePercent = total ? Math.round((done/total)*100) : 0;
+    let missingPercent = total ? Math.round((missing/total)*100) : 0;
 
-    function displayJoinedClasses(){
-        let div = document.getElementById("joinedClasses");
-        div.innerHTML="<h3>Joined Classes:</h3>";
-        for(let key in localStorage){
-            if(key.startsWith("class_")){
-                let c = JSON.parse(localStorage.getItem(key));
-                if(c.students && c.students.includes(currentUser)){
-                    div.innerHTML+=`<div class="class-box">${c.name} <div class="class-code">${key.replace("class_","")}</div></div>`;
-                }
-            }
+    // Labels show both raw count and percent
+    let labels = [
+        `Active: ${active} (${activePercent}%)`,
+        `Done: ${done} (${donePercent}%)`,
+        `Missing: ${missing} (${missingPercent}%)`
+    ];
+
+    // Render chart
+    new Chart(document.getElementById("progressChart"),{
+        type:"doughnut",
+        data:{
+            labels: labels,
+            datasets:[{
+                data:[active,done,missing],
+                backgroundColor:["#f0ad4e","#5cb85c","#d9534f"]
+            }]
+        },
+        options:{
+            responsive:true,
+            plugins:{ legend:{ position:"bottom" } }
         }
-    }
+    });
 }
 </script>
-</body>
-</html>
