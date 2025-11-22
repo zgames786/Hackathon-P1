@@ -1,8 +1,10 @@
 <style>
   body { font-family: Arial; margin: 0; padding: 0; }
 
-  /* Move content down a bit */
-  .page { display: none; padding: 80px 20px 20px 20px; } /* top padding increased to 80px */
+  /* Move all content down so hamburger doesn't cover it */
+  .page-content {
+    padding-top: 80px; /* pushes content below hamburger */
+  }
 
   /* Sidebar */
   #sidebar {
@@ -40,8 +42,8 @@
     left: 0;
   }
 
-  /* Text size increase */
-  h1 { font-size: 36px; }
+  /* Slightly bigger text */
+  h1 { font-size: 36px; margin-bottom: 20px; }
   h2 { font-size: 28px; }
   input, button { font-size: 18px; }
   .assignment { font-size: 18px; margin-bottom: 5px; }
@@ -52,21 +54,3 @@
   .hidden { display: none; }
 
 </style>
-
-<script>
-  function showPage(page) {
-    document.getElementById("homePage").style.display = "none";
-    document.getElementById("assignmentsPage").style.display = "none";
-
-    if (page === "home") {
-      document.getElementById("homePage").style.display = "block";
-      document.querySelector("#homePage h1").textContent = "Homework Tracker MVP";
-    }
-    if (page === "assignments") {
-      document.getElementById("assignmentsPage").style.display = "block";
-      document.querySelector("#assignmentsPage h1").textContent = "Assignments";
-    }
-
-    toggleSidebar(); // close sidebar after selection
-  }
-</script>
