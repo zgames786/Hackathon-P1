@@ -15,6 +15,12 @@
     .tab-btn{padding:5px 10px;margin-right:5px;cursor:pointer;border:1px solid #ccc;border-radius:5px;}
     .tab-selected{background:#007bff;color:white;}
     canvas{margin-top:20px;}
+    #calendarContainer{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;}
+    .day-box{border:1px solid #ccc;padding:5px;min-height:50px;position:relative;}
+    .day-number{font-weight:bold;}
+    .assignment-label{font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .month-nav{text-align:center;margin-bottom:10px;}
+    .month-nav button{margin:0 10px;}
   </style>
 </head>
 <body>
@@ -57,8 +63,12 @@
 
   <!-- CALENDAR TAB -->
   <div id="calendarTab" style="display:none;">
-    <h2>Calendar</h2>
-    <div id="calendarContainer">Placeholder</div>
+    <div class="month-nav">
+      <button onclick="prevMonth()">◀</button>
+      <span id="monthYear"></span>
+      <button onclick="nextMonth()">▶</button>
+    </div>
+    <div id="calendarContainer"></div>
   </div>
 
 </div>
@@ -108,6 +118,7 @@ function joinClass(){
   classes.push(cls);
   localStorage.setItem(currentUser+"_classes",JSON.stringify(classes));
   renderClasses();
+  renderPie();
   alert("Class joined!");
 }
 
@@ -162,8 +173,4 @@ function renderAssignments(){
         if(currentType==="teacher" || status===currentAssignmentTab){
           let div=document.createElement("div");
           div.className="assign-box";
-          div.innerText=a.name+" | Due: "+a.due;
-          if(currentType==="teacher"){
-            let del=document.createElement("button");
-            del.innerText="Delete";
-            del.onclick=()=>{ if(confirm("Delete as
+          div.innerText=a.name+" | Due
