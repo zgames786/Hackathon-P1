@@ -2,12 +2,13 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Homework Tracker MVP Login</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Homework Tracker - Login</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <div class="login-container">
-  <h1>Homework Tracker MVP</h1>
+  <h1>Homework Tracker</h1>
   <h2>Select Account Type</h2>
   <div class="account-choice">
     <button onclick="selectType('student')">Student 📚</button>
@@ -15,8 +16,8 @@
   </div>
 
   <div id="loginForm" style="display:none;">
-    <input type="text" id="username" placeholder="Username">
-    <input type="password" id="password" placeholder="Password">
+    <input type="text" id="username" placeholder="Username" autocomplete="username">
+    <input type="password" id="password" placeholder="Password" autocomplete="current-password">
     <button onclick="login()">Login</button>
     <button onclick="createAccount()">Create Account</button>
   </div>
