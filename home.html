@@ -1,80 +1,52 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Homework Tracker MVP</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <style>
-    body{margin:0;font-family:sans-serif;}
-    #sidebar{width:200px;background:#333;color:white;height:100vh;position:fixed;top:0;left:0;display:none;padding:10px;}
-    #content{margin-left:0;padding:20px;transition:margin-left 0.3s;}
-    .sidebar-btn{display:block;color:white;text-decoration:none;margin:10px 0;cursor:pointer;}
-    .tab-btn{padding:5px 10px;margin:5px;cursor:pointer;border:1px solid #333;}
-    .tab-selected{background:#333;color:white;}
-    #classesContainer .class-box, #assignmentsContainer .assign-box{border:1px solid #ccc;padding:5px;margin:5px;}
-    #calendarContainer{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;}
-    .day-box{border:1px solid #ccc;min-height:50px;padding:2px;}
-    .day-number{font-weight:bold;}
-    #toggleSidebar{cursor:pointer;font-size:24px;}
-    h1,h2{text-align:center;}
-    #piechart{max-width:300px;margin:auto;}
-  </style>
+<meta charset="UTF-8">
+<title>Homework Tracker MVP</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 
-<!-- SIDEBAR -->
+<div id="hamburger" onclick="toggleSidebar()">☰</div>
+
 <div id="sidebar">
-  <div class="sidebar-btn" onclick="showTab('home')">Home</div>
-  <div class="sidebar-btn" onclick="showTab('assignments')">Assignments</div>
-  <div class="sidebar-btn" onclick="showTab('calendar')">Calendar</div>
+  <button onclick="showTab('home')">Home</button>
+  <button onclick="showTab('assignments')">Assignments</button>
+  <button onclick="showTab('calendar')">Calendar</button>
 </div>
 
-<!-- MAIN CONTENT -->
-<div id="content">
-  <div id="toggleSidebar" onclick="toggleSidebar()">☰</div>
-  
-  <!-- HOME TAB -->
-  <div id="homeTab">
-    <h1>Homework Tracker MVP</h1>
-    <h2>Welcome, <span id="usernameDisplay"></span></h2>
-    <div>
-      <button onclick="joinClass()">Join Class</button>
-      <button onclick="createClass()" id="createClassBtn">Create Class</button>
-    </div>
-    <div id="classesContainer"></div>
-    <canvas id="piechart"></canvas>
-  </div>
+<div class="header-title">Homework Tracker MVP</div>
+<div class="header-subtitle">Welcome <span id="userNameDisplay"></span></div>
 
-  <!-- ASSIGNMENTS TAB -->
-  <div id="assignmentsTab" style="display:none;">
-    <h1 id="assignmentsTitle">Assignments</h1>
-    <div>
-      <button class="tab-btn tab-selected" onclick="showAssignmentTab('active')">Active</button>
-      <button class="tab-btn" onclick="showAssignmentTab('done')">Done</button>
-      <button class="tab-btn" onclick="showAssignmentTab('missing')">Missing</button>
-      <button onclick="addAssignment()" id="addAssignmentBtn" style="display:none;">Add Assignment</button>
-    </div>
-    <div id="assignmentsContainer"></div>
-  </div>
-
-  <!-- CALENDAR TAB -->
-  <div id="calendarTab" style="display:none;">
-    <h1>Calendar</h1>
-    <div>
-      <button onclick="prevMonth()">&lt;</button>
-      <span id="monthYear"></span>
-      <button onclick="nextMonth()">&gt;</button>
-    </div>
-    <div id="calendarContainer"></div>
-  </div>
+<div id="homeTab">
+  <canvas id="piechart"></canvas>
+  <div id="classesContainer"></div>
+  <button onclick="joinClass()">Join Class</button>
+  <button onclick="createClass()">Create Class</button>
 </div>
 
-<!-- LINK TO JS -->
+<div id="assignmentsTab" style="display:none;">
+  <div class="tab-buttons">
+    <button class="tab-btn tab-selected" onclick="showAssignmentTab('active')">Active</button>
+    <button class="tab-btn" onclick="showAssignmentTab('done')">Done</button>
+    <button class="tab-btn" onclick="showAssignmentTab('missing')">Missing</button>
+  </div>
+  <div id="assignmentsContainer"></div>
+  <button id="addAssignmentBtn" onclick="addAssignment()" style="display:none;">Add Assignment</button>
+</div>
+
+<div id="calendarTab" style="display:none;">
+  <div id="calendarHeader">
+    <button id="prevMonthBtn">⬅️</button>
+    <span id="monthYear"></span>
+    <button id="nextMonthBtn">➡️</button>
+  </div>
+  <div id="calendarContainer"></div>
+</div>
+
+<div id="userGuide"></div>
+
 <script src="app.js"></script>
-<script>
-document.getElementById("usernameDisplay").innerText = currentUser;
-if(currentType!=="teacher") document.getElementById("createClassBtn").style.display="none";
-</script>
-
 </body>
 </html>
