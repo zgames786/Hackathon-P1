@@ -72,11 +72,8 @@
 <!-- LINK TO JS -->
 <script src="app.js"></script>
 <script>
-  // Display username
-  document.getElementById("usernameDisplay").innerText = currentUser;
-
-  // Show/hide create class button for teachers
-  if(currentType!=="teacher") document.getElementById("createClassBtn").style.display="none";
+document.getElementById("usernameDisplay").innerText = currentUser;
+if(currentType!=="teacher") document.getElementById("createClassBtn").style.display="none";
 </script>
 
 </body>
