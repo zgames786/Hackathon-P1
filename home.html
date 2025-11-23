@@ -5,13 +5,13 @@
   <style>
     body{font-family:sans-serif;margin:0;padding:0;}
     .header{background:black;color:white;padding:20px;text-align:center;}
-    #welcome{margin-top:10px;font-size:20px;}
+    #welcome{margin-top:5px;font-size:18px;}
     .sidebar{width:200px;background:#333;color:white;position:fixed;top:0;left:0;height:100%;padding-top:50px;display:none;}
     .sidebar button{width:100%;padding:10px;margin-bottom:5px;color:white;background:none;border:none;text-align:left;cursor:pointer;}
     .main{margin-left:0;padding:20px;}
-    .class-box{border:1px solid #ccc;padding:10px;margin:10px;border-radius:5px;}
-    #piechart{width:200px;height:200px;}
+    .class-box{border:1px solid #ccc;padding:10px;margin:10px;border-radius:5px;cursor:pointer;}
     .top-left{position:absolute;top:0;left:0;background:black;color:white;padding:10px;cursor:pointer;}
+    canvas{margin-top:20px;}
   </style>
 </head>
 <body>
@@ -27,7 +27,7 @@
 </div>
 <div class="main" id="main">
   <div id="homeTab">
-    <h2>Your Classes</h2>
+    <h2>Classes</h2>
     <div>
       <button onclick="joinClass()">Join Class</button>
       <button onclick="createClass()">Create Class</button>
@@ -37,48 +37,35 @@
   </div>
   <div id="assignmentsTab" style="display:none;">
     <h2>Assignments</h2>
-    <div id="activeTab"></div>
-    <div id="doneTab" style="display:none;"></div>
-    <div id="missingTab" style="display:none;"></div>
+    <div id="assignmentsContainer"></div>
   </div>
   <div id="calendarTab" style="display:none;">
-    <button id="prevMonth">◀</button>
-    <span id="monthYear"></span>
-    <button id="nextMonth">▶</button>
-    <div id="calendar-grid" style="display:grid;grid-template-columns:repeat(7,1fr);grid-gap:5px;margin-top:10px;"></div>
+    <h2>Calendar</h2>
+    <div id="calendarContainer">Placeholder</div>
   </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
+// ✅ Session check
 let currentUser = sessionStorage.getItem("currentUser") || localStorage.getItem("lastUser");
 let currentType = sessionStorage.getItem("currentType") || localStorage.getItem("lastType");
-if(currentUser && currentType){
-  sessionStorage.setItem("currentUser", currentUser);
-  sessionStorage.setItem("currentType", currentType);
-}else{
-  alert("Not logged in");
-  window.location.href="index.html";
-}
-
+if(!currentUser || !currentType){ alert("Login first"); window.location.href="index.html"; }
 document.getElementById("welcome").innerText="Welcome, "+currentUser;
 
 function toggleSidebar(){
   let sb=document.getElementById("sidebar");
   sb.style.display=sb.style.display==="block"?"none":"block";
 }
-
 function showTab(tab){
   document.getElementById("homeTab").style.display="none";
   document.getElementById("assignmentsTab").style.display="none";
   document.getElementById("calendarTab").style.display="none";
-  if(tab==="home") document.getElementById("homeTab").style.display="block";
-  if(tab==="assignments") document.getElementById("assignmentsTab").style.display="block";
-  if(tab==="calendar") document.getElementById("calendarTab").style.display="block";
+  document.getElementById(tab+"Tab").style.display="block";
   document.getElementById("sidebar").style.display="none";
 }
 
-// Simple localStorage class system
+// Classes
 let classes = JSON.parse(localStorage.getItem(currentUser+"_classes")||"[]");
 function renderClasses(){
   let container=document.getElementById("classesContainer");
@@ -95,7 +82,8 @@ renderClasses();
 function joinClass(){
   let code=prompt("Enter class code");
   if(!code) return;
-  let cls=JSON.parse(localStorage.getItem("all_classes")||"[]").find(c=>c.code===code);
+  let all=JSON.parse(localStorage.getItem("all_classes")||"[]");
+  let cls=all.find(c=>c.code===code);
   if(!cls){ alert("Class not found"); return; }
   if(classes.find(c=>c.code===code)){ alert("Already joined"); return; }
   classes.push(cls);
@@ -119,7 +107,7 @@ function createClass(){
   alert("Class created! Code: "+code);
 }
 
-// Simple pie chart
+// Pie chart
 function renderPie(){
   if(currentType!=="student") return;
   let active=0,done=0,missing=0;
@@ -135,43 +123,6 @@ function renderPie(){
   new Chart(ctx,{type:"doughnut",data:{labels:["Active","Done","Missing"],datasets:[{data:[active,done,missing],backgroundColor:["#007bff","#28a745","#dc3545"]}]},options:{plugins:{legend:{position:"bottom"}}}});
 }
 renderPie();
-
-// Calendar variables
-let today=new Date();
-let currentMonth=today.getMonth();
-let currentYear=today.getFullYear();
-function renderCalendar(){
-  let grid=document.getElementById("calendar-grid");
-  let monthName=document.getElementById("monthYear");
-  grid.innerHTML="";
-  monthName.innerText=new Intl.DateTimeFormat('en-US',{month:'long'}).format(new Date(currentYear,currentMonth))+" "+currentYear;
-  let firstDay=new Date(currentYear,currentMonth,1).getDay();
-  let daysInMonth=new Date(currentYear,currentMonth+1,0).getDate();
-  for(let i=0;i<firstDay;i++){ let empty=document.createElement("div"); grid.appendChild(empty);}
-  for(let d=1;d<=daysInMonth;d++){
-    let box=document.createElement("div");
-    box.style.border="1px solid #ccc";
-    box.style.padding="5px";
-    box.style.height="80px";
-    let dayNum=document.createElement("div"); dayNum.innerText=d; box.appendChild(dayNum);
-    classes.forEach(c=>{
-      (c.assignments||[]).forEach(a=>{
-        if(!a.due) return;
-        let ad=new Date(a.due);
-        if(ad.getDate()===d && ad.getMonth()===currentMonth && ad.getFullYear()===currentYear){
-          let t=document.createElement("div"); t.style.fontSize="10px"; t.title=a.name;
-          t.innerText=a.name.length>12? a.name.substring(0,12)+"...":a.name;
-          box.appendChild(t);
-        }
-      });
-    });
-    grid.appendChild(box);
-  }
-}
-
-document.getElementById("prevMonth").onclick=()=>{ currentMonth--; if(currentMonth<0){currentMonth=11; currentYear--; } renderCalendar();}
-document.getElementById("nextMonth").onclick=()=>{ currentMonth++; if(currentMonth>11){currentMonth=0; currentYear++; } renderCalendar();}
-renderCalendar();
 </script>
 </body>
 </html>
