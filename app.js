@@ -1,245 +1,45 @@
-// ==================== SESSION CHECK ====================
-let currentUser = sessionStorage.getItem("currentUser") || localStorage.getItem("lastUser");
-let currentType = sessionStorage.getItem("currentType") || localStorage.getItem("lastType");
-if(!currentUser || !currentType){ 
-    alert("Login first"); 
-    window.location.href="index.html"; 
+let userType = "";
+let loggedInUser = null;
+let usersDB = {student:{}, teacher:{}};
+let classesDB = {};
+let currentTab = "home";
+let currentMonth = new Date().getMonth();
+let currentYear = new Date().getFullYear();
+let assignmentsDB = {};
+
+function selectType(type) {
+    userType = type;
+    document.getElementById("loginForm").style.display = "block";
 }
 
-// ==================== SIDEBAR ====================
-function toggleSidebar(){
-  let sb=document.getElementById("sidebar");
-  sb.style.display=sb.style.display==="block"?"none":"block";
+function createAccount() {
+    let username = document.getElementById("username").value;
+    let password = document.getElementById("password").value;
+    if (!username || !password) { alert("Enter valid username/password"); return; }
+    if (!usersDB[userType][username]) { 
+        usersDB[userType][username] = {password: password, classes: []};
+        alert("Account created!"); 
+    } else { alert("User exists!"); }
 }
 
-function showTab(tab){
-  document.getElementById("homeTab").style.display="none";
-  document.getElementById("assignmentsTab").style.display="none";
-  document.getElementById("calendarTab").style.display="none";
-  document.getElementById(tab+"Tab").style.display="block";
-  document.getElementById("sidebar").style.display="none"; // auto-close
+function login() {
+    let username = document.getElementById("username").value;
+    let password = document.getElementById("password").value;
+    if (usersDB[userType][username] && usersDB[userType][username].password === password) {
+        loggedInUser = username;
+        window.location.href = "home.html";
+    } else { alert("Invalid credentials"); }
 }
 
-// ==================== CLASS MANAGEMENT ====================
-let classes = JSON.parse(localStorage.getItem(currentUser+"_"+currentType+"_classes")||"[]");
+function toggleSidebar() { document.getElementById("sidebar").classList.toggle("show"); }
 
-function renderClasses(){
-  let container=document.getElementById("classesContainer");
-  container.innerHTML="";
-  classes.forEach(c=>{
-    let div=document.createElement("div");
-    div.className="class-box";
-    div.innerText=c.name+" - Code: "+c.code;
-    container.appendChild(div);
-  });
-}
-renderClasses();
-
-function joinClass(){
-  let code=prompt("Enter class code");
-  if(!code) return;
-  let all=JSON.parse(localStorage.getItem("all_classes")||"[]");
-  let cls=all.find(c=>c.code===code);
-  if(!cls){ alert("Class not found"); return; }
-  if(classes.find(c=>c.code===code)){ alert("Already joined"); return; }
-  classes.push(cls);
-  localStorage.setItem(currentUser+"_"+currentType+"_classes",JSON.stringify(classes));
-  renderClasses();
-  renderPie();
-  renderAssignments();
-  renderCalendar();
-  alert("Class joined!");
+function showTab(tab) {
+    ["homeTab","assignmentsTab","calendarTab"].forEach(t=>document.getElementById(t).style.display="none");
+    document.getElementById(tab+"Tab").style.display="block";
+    currentTab = tab;
 }
 
-function createClass(){
-  if(currentType!=="teacher"){ alert("Only teachers can create classes"); return; }
-  let name=prompt("Class Name");
-  if(!name) return;
-  let code=Math.random().toString(36).substring(2,9).toUpperCase();
-  let cls={name:name,code:code,assignments:[]};
-  classes.push(cls);
-  localStorage.setItem(currentUser+"_"+currentType+"_classes",JSON.stringify(classes));
-  let all=JSON.parse(localStorage.getItem("all_classes")||"[]");
-  all.push(cls);
-  localStorage.setItem("all_classes",JSON.stringify(all));
-  renderClasses();
-  alert("Class created! Code: "+code);
-}
-
-// ==================== PIE CHART ====================
-function renderPie(){
-  if(currentType!=="student") return;
-  let active=0,done=0,missing=0;
-  let allClasses = JSON.parse(localStorage.getItem("all_classes")||"[]");
-  classes.forEach(c=>{
-    let cls = allClasses.find(x=>x.code===c.code);
-    if(!cls) return;
-    (cls.assignments||[]).forEach(a=>{
-      if(!a.statuses) a.statuses={};
-      let status = a.statuses[currentUser] || "active";
-      if(status==="active") active++;
-      else if(status==="done") done++;
-      else if(status==="missing") missing++;
-    });
-  });
-  let ctx=document.getElementById("piechart").getContext("2d");
-  new Chart(ctx,{
-    type:"doughnut",
-    data:{
-      labels:["Active","Done","Missing"],
-      datasets:[{data:[active,done,missing],backgroundColor:["#007bff","#28a745","#dc3545"]}]
-    },
-    options:{plugins:{legend:{position:"bottom"}}}
-  });
-}
-renderPie();
-
-// ==================== ASSIGNMENTS ====================
-let currentAssignmentTab="active";
-function showAssignmentTab(tab){
-  currentAssignmentTab=tab;
-  document.querySelectorAll(".tab-btn").forEach(btn=>btn.classList.remove("tab-selected"));
-  event.target.classList.add("tab-selected");
-  renderAssignments();
-}
-
-function renderAssignments(){
-  let container=document.getElementById("assignmentsContainer");
-  container.innerHTML="";
-  let allClasses = JSON.parse(localStorage.getItem("all_classes")||"[]");
-  classes.forEach(c=>{
-    let cls = allClasses.find(x=>x.code===c.code);
-    if(!cls) return;
-    (cls.assignments||[]).forEach(a=>{
-      if(!a.statuses) a.statuses={};
-      let status = a.statuses[currentUser] || "active";
-      if(currentType==="teacher" || status===currentAssignmentTab){
-        let div=document.createElement("div");
-        div.className="assign-box";
-        div.innerText=a.name+" | Due: "+a.due;
-        if(currentType==="teacher"){
-          let del=document.createElement("button");
-          del.innerText="Delete";
-          del.onclick=()=>{ 
-            if(confirm("Delete assignment?")){ 
-              let all = JSON.parse(localStorage.getItem("all_classes")||"[]");
-              let classIdx = all.findIndex(x=>x.code===cls.code);
-              if(classIdx>=0){
-                all[classIdx].assignments = all[classIdx].assignments.filter(x=>x!==a);
-                localStorage.setItem("all_classes",JSON.stringify(all));
-              }
-              renderAssignments();
-              renderCalendar();
-              renderPie();
-            } 
-          };
-          div.appendChild(del);
-        }
-        container.appendChild(div);
-      }
-    });
-  });
-  if(currentType==="teacher") document.getElementById("addAssignmentBtn").style.display="inline-block";
-}
-renderAssignments();
-
-function addAssignment(){
-  let classCode=prompt("Enter class code for this assignment");
-  let all = JSON.parse(localStorage.getItem("all_classes")||"[]");
-  let cls = all.find(x=>x.code===classCode);
-  if(!cls){ alert("Class not found"); return; }
-
-  let name=prompt("Assignment Name");
-  let due=prompt("Due Date (any format)");
-
-  let parsedDate=parseDueDate(due);
-  if(!parsedDate){
-    alert(`"${due}" is not a valid date! Please enter a valid date format.`);
-    return;
-  }
-
-  let assignment={name:name,due:due,statuses:{}};
-  cls.assignments.push(assignment);
-  localStorage.setItem("all_classes",JSON.stringify(all));
-  renderAssignments();
-  renderPie();
-  renderCalendar();
-}
-
-// ==================== CALENDAR ====================
-let today = new Date();
-let calendarMonth = today.getMonth();
-let calendarYear = today.getFullYear();
-
-function parseDueDate(due){
-    let parsed = new Date(due);
-    if(!isNaN(parsed)) return parsed;
-
-    let match = due.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
-    if(match) return new Date(match[3], match[1]-1, match[2]);
-
-    let textDate = Date.parse(due);
-    if(!isNaN(textDate)) return new Date(textDate);
-
-    return null;
-}
-
-function renderCalendar(){
-  let container=document.getElementById("calendarContainer");
-  if(!container) return;
-  container.innerHTML="";
-  document.getElementById("monthYear").innerText = new Date(calendarYear,calendarMonth).toLocaleString('default',{month:'long',year:'numeric'});
-
-  let firstDay = new Date(calendarYear, calendarMonth,1).getDay();
-  let lastDate = new Date(calendarYear,calendarMonth+1,0).getDate();
-
-  for(let i=0;i<firstDay;i++){ container.appendChild(document.createElement("div")); }
-
-  let allClasses = JSON.parse(localStorage.getItem("all_classes")||"[]");
-
-  for(let d=1;d<=lastDate;d++){
-    let dayDiv=document.createElement("div");
-    dayDiv.className="day-box";
-    let dayNum=document.createElement("div");
-    dayNum.className="day-number";
-    dayNum.innerText=d;
-    dayDiv.appendChild(dayNum);
-
-    classes.forEach(c=>{
-      let cls = allClasses.find(x=>x.code===c.code);
-      if(!cls) return;
-      (cls.assignments||[]).forEach(a=>{
-        let adate=parseDueDate(a.due);
-        if(adate && adate.getFullYear()===calendarYear && adate.getMonth()===calendarMonth && adate.getDate()===d){
-          let lbl=document.createElement("div");
-          lbl.className="assignment-label";
-          lbl.title=a.name;
-          lbl.innerText=a.name.length>15 ? a.name.substring(0,15)+"..." : a.name;
-          dayDiv.appendChild(lbl);
-        }
-      });
-    });
-
-    container.appendChild(dayDiv);
-  }
-}
-renderCalendar();
-
-function prevMonth(){ calendarMonth--; if(calendarMonth<0){ calendarMonth=11; calendarYear--; } renderCalendar(); }
-function nextMonth(){ calendarMonth++; if(calendarMonth>11){ calendarMonth=0; calendarYear++; } renderCalendar(); }
-
-// ==================== USER GUIDE ====================
-let guideContainer = document.getElementById("userGuide");
-if(guideContainer){
-  guideContainer.innerHTML=`
-    <h3>How to use Homework Tracker MVP:</h3>
-    <ul>
-      <li>Create a teacher or student account on the login page.</li>
-      <li>Teachers: Create classes and assignments. Assign due dates for each assignment.</li>
-      <li>Students: Join classes using class codes from teachers.</li>
-      <li>Students can see assignments and pie chart of completed/missing/active work.</li>
-      <li>Calendar shows assignments per day. Click tabs to switch between Home, Assignments, and Calendar.</li>
-      <li>Invalid due dates will show an alert when adding assignments.</li>
-    </ul>
-  `;
-}
+function joinClass() { let code=prompt("Enter class code"); alert("Class joined (demo)"); }
+function createClass() { let name=prompt("Enter class name"); alert("Class created (demo)"); }
+function showAssignmentTab(tab) { alert("Switching assignments tab: "+tab); }
+function addAssignment() { alert("Add assignment clicked"); }
