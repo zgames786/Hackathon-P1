@@ -2,23 +2,29 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Assignments</title>
+<title>Homework Tracker MVP - Assignments</title>
 <style>
-body { font-family: Arial, sans-serif; margin:20px; }
-h1 { font-size:50px; margin-bottom:0; }
-h2 { font-size:26px; margin-top:0; margin-bottom:20px; }
+body { font-family: Arial, sans-serif; margin:0; background:#f4f4f4; }
 .menu { background:black; color:white; padding:15px; font-size:26px; cursor:pointer; position:fixed; top:0; left:0; width:100%; z-index:10; }
 .sidebar { width:200px; height:100vh; background:#222; position:fixed; top:0; left:-200px; transition:0.3s; padding-top:60px; z-index:9; }
 .sidebar a { display:block; padding:12px; color:white; text-decoration:none; font-size:18px; }
 .sidebar a:hover { background:#444; }
-.section { margin-top:90px; margin-left:20px; } 
+.section { margin-top:90px; margin-left:20px; margin-right:20px; }
+h1 { font-size:50px; margin-bottom:0; }
+h2 { font-size:26px; margin-top:0; margin-bottom:20px; }
 .tab { margin-bottom: 15px; }
 .tab button { margin-right:5px; padding:8px 12px; border:none; border-radius:6px; cursor:pointer; }
 .tab button.active { background:black; color:white; }
-.box { padding:12px; margin-bottom:10px; border-radius:8px; background:#eee; border-left:6px solid #666; color:black; display:flex; justify-content: space-between; align-items: center; }
+.box { padding:12px; margin-bottom:10px; border-radius:8px; background:#eee; border-left:6px solid #666; color:black; display:flex; justify-content: space-between; align-items: center; flex-wrap:wrap; }
 .assign-buttons button { margin-left:5px; padding:4px 6px; border:none; border-radius:4px; cursor:pointer; }
 input { margin:5px; padding:5px; }
 canvas {margin:10px;}
+#calendar { display:none; margin-top:20px; }
+#calendar header { display:flex; justify-content:space-between; align-items:center; }
+#calendar-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:5px; margin-top:10px; }
+.day-box { background:white; padding:8px; border-radius:6px; min-height:80px; box-shadow:0 1px 5px rgba(0,0,0,0.2); font-size:14px; overflow:hidden; position:relative; }
+.day-number { font-weight:bold; margin-bottom:4px; }
+.day-assign { display:block; font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 </style>
 </head>
 <body>
@@ -40,154 +46,93 @@ canvas {margin:10px;}
   <button class="active" data-tab="active">Active</button>
   <button data-tab="done">Done</button>
   <button data-tab="missing">Missing</button>
+  <button data-tab="calendar">Calendar</button>
 </div>
 
 <div id="activeTab"></div>
 <div id="doneTab" style="display:none;"></div>
 <div id="missingTab" style="display:none;"></div>
-
-<canvas id="progressChart" width="200" height="200"></canvas>
+<div id="calendar">
+    <header>
+        <button id="prevMonth">&lt;</button>
+        <h2 id="monthYear"></h2>
+        <button id="nextMonth">&gt;</button>
+    </header>
+    <div id="calendar-grid"></div>
+</div>
 
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 window.onload=function(){
-    let currentUser = sessionStorage.getItem("currentUser");
-    let currentType = sessionStorage.getItem("currentType");
-    if(!currentUser || !currentType){ alert("Not logged in"); window.location.href="index.html"; return; }
-    document.getElementById("welcomeText").innerText = "Welcome, "+currentUser;
+let currentUser=sessionStorage.getItem("currentUser");
+let currentType=sessionStorage.getItem("currentType");
+if(!currentUser||!currentType){alert("Not logged in"); window.location.href="index.html"; return;}
+document.getElementById("welcomeText").innerText="Welcome, "+currentUser;
 
-    let sidebar = document.getElementById("side");
-    document.querySelector(".menu").addEventListener('click', ()=>{ sidebar.style.left = (sidebar.style.left==="0px")?"-200px":"0px"; });
-    document.querySelectorAll('#side a').forEach(link=>link.addEventListener('click', ()=>{ sidebar.style.left="-200px"; }));
-    window.logout = function(){ sessionStorage.clear(); window.location.href="index.html"; }
+// Sidebar toggle
+let sidebar=document.getElementById("side");
+document.querySelector(".menu").addEventListener('click',()=>{sidebar.style.left=(sidebar.style.left==="0px")?"-200px":"0px";});
+document.querySelectorAll('#side a').forEach(link=>link.addEventListener('click',()=>{ sidebar.style.left="-200px"; }));
+window.logout=()=>{sessionStorage.clear(); window.location.href="index.html";}
 
-    let classes=[];
-    for(let key in localStorage){
-        if(key.startsWith("class_")){
-            let c=JSON.parse(localStorage.getItem(key));
-            if(currentType==="student" && c.students.includes(currentUser)) classes.push(key);
-            if(currentType==="teacher" && c.teacher===currentUser) classes.push(key);
-        }
-    }
-
-    let classSelectArea=document.getElementById("classSelectArea");
-    if(currentType==="teacher"){
-        classSelectArea.innerHTML='<select id="classSelect"><option value="">Select class</option></select> <button onclick="addAssignment()">Add Assignment</button>';
-        let select=document.getElementById("classSelect");
-        classes.forEach(c=>{ select.innerHTML+=`<option value="${c}">${JSON.parse(localStorage.getItem(c)).name} (${c.replace("class_","")})</option>`; });
-    } else {
-        classSelectArea.innerHTML='<select id="classSelect"><option value="">Select class</option></select>';
-        let select=document.getElementById("classSelect");
-        classes.forEach(c=>{ select.innerHTML+=`<option value="${c}">${JSON.parse(localStorage.getItem(c)).name} (${c.replace("class_","")})</option>`; });
-    }
-
-    let assignments=[];
-
-    function loadAssignments(){
-        let select = document.getElementById("classSelect").value;
-        assignments=[];
-        if(!select) return;
-        let classData = JSON.parse(localStorage.getItem(select));
-        if(classData.assignments) assignments = classData.assignments.map(a=>{
-            if(!a.statuses) a.statuses={};
-            if(!a.statuses[currentUser]) a.statuses[currentUser]="active";
-            return a;
-        });
-        renderAssignments();
-    }
-
-    function saveAssignments(){
-        let select = document.getElementById("classSelect").value;
-        if(!select) return;
-        let classData = JSON.parse(localStorage.getItem(select));
-        classData.assignments = assignments;
-        localStorage.setItem(select, JSON.stringify(classData));
-        updateChart();
-    }
-
-    function renderAssignments(){
-        let activeTab=document.getElementById("activeTab");
-        let doneTab=document.getElementById("doneTab");
-        let missingTab=document.getElementById("missingTab");
-        activeTab.innerHTML=""; doneTab.innerHTML=""; missingTab.innerHTML="";
-
-        assignments.forEach((a,i)=>{
-            let box=document.createElement("div");
-            box.className="box";
-            box.innerHTML=`<div><b>${a.subject}:</b> ${a.name}<br>Due: <span id="due_${i}">${a.due}</span></div>`;
-
-            let buttons=document.createElement("div");
-            buttons.className="assign-buttons";
-
-            if(currentType==="student"){
-                let status=a.statuses[currentUser];
-                if(status==="active"){
-                    let doneBtn=document.createElement("button"); doneBtn.innerText="Mark Done"; doneBtn.onclick=()=>{ a.statuses[currentUser]="done"; saveAssignments(); renderAssignments(); };
-                    let missBtn=document.createElement("button"); missBtn.innerText="Mark Missing"; missBtn.onclick=()=>{ a.statuses[currentUser]="missing"; saveAssignments(); renderAssignments(); };
-                    buttons.appendChild(doneBtn); buttons.appendChild(missBtn);
-                    activeTab.appendChild(box);
-                } else if(status==="done"){
-                    let delBtn=document.createElement("button"); delBtn.innerText="Delete"; delBtn.onclick=()=>{ if(confirm("Delete assignment forever?")){ assignments.splice(i,1); saveAssignments(); renderAssignments(); } };
-                    buttons.appendChild(delBtn); doneTab.appendChild(box);
-                } else if(status==="missing"){ missingTab.appendChild(box); }
-            } else if(currentType==="teacher"){
-                let editBtn=document.createElement("button"); editBtn.innerText="Change Due Date"; editBtn.onclick=()=>{ let newDue=prompt("New Due Date",a.due); if(newDue){ a.due=newDue; saveAssignments(); renderAssignments(); } };
-                let delBtn=document.createElement("button"); delBtn.innerText="Delete"; delBtn.onclick=()=>{ if(confirm("Delete assignment?")){ assignments.splice(i,1); saveAssignments(); renderAssignments(); } };
-                buttons.appendChild(editBtn); buttons.appendChild(delBtn);
-                activeTab.appendChild(box); // Only use one tab for teacher
-            }
-
-            box.appendChild(buttons);
-        });
-
-        updateChart();
-    }
-
-    window.addAssignment=function(){
-        let select = document.getElementById("classSelect").value;
-        if(!select){ alert("Select class"); return; }
-        let name=prompt("Assignment name:");
-        if(!name) return;
-        let subject=prompt("Subject:");
-        if(!subject) return;
-        let due=prompt("Due date (e.g., 11/23/2025 12PM)","11/23/2025 12PM");
-        assignments.push({name, subject, due, statuses:{}});
-        saveAssignments(); renderAssignments();
-    }
-
-    document.getElementById("classSelect").addEventListener("change", loadAssignments);
-
-    // Tabs only for students
-    document.querySelectorAll(".tab button").forEach(btn=>{
-        btn.onclick=function(){
-            if(currentType==="teacher") return;
-            document.querySelectorAll(".tab button").forEach(b=>b.classList.remove("active"));
-            btn.classList.add("active");
-            document.getElementById("activeTab").style.display=(btn.dataset.tab==="active")?"block":"none";
-            document.getElementById("doneTab").style.display=(btn.dataset.tab==="done")?"block":"none";
-            document.getElementById("missingTab").style.display=(btn.dataset.tab==="missing")?"block":"none";
-        }
-    });
-
-    // Chart for student only
-    let chartCanvas=document.getElementById("progressChart");
-    let chart=null;
-    function updateChart(){
-        if(currentType==="teacher"){ chartCanvas.style.display="none"; return; }
-        let total=assignments.length;
-        let done=assignments.filter(a=>a.statuses[currentUser]==="done").length;
-        let missing=assignments.filter(a=>a.statuses[currentUser]==="missing").length;
-        let active=total-done-missing;
-        if(chart) chart.destroy();
-        chart=new Chart(chartCanvas,{
-            type:"doughnut",
-            data:{ labels:["Active","Done","Missing"], datasets:[{ data:[active,done,missing], backgroundColor:["#f0ad4e","#5cb85c","#d9534f"] }] }
-        });
+// Classes
+let classes=[];
+for(let key in localStorage){
+    if(key.startsWith("class_")){
+        let c=JSON.parse(localStorage.getItem(key));
+        if(currentType==="student"&&c.students&&c.students.includes(currentUser)) classes.push(key);
+        if(currentType==="teacher"&&c.teacher===currentUser) classes.push(key);
     }
 }
-</script>
 
-</body>
-</html>
+let classSelectArea=document.getElementById("classSelectArea");
+if(currentType==="teacher"){
+    classSelectArea.innerHTML='<select id="classSelect"><option value="">Select class</option></select> <button onclick="addAssignment()">Add Assignment</button>';
+    let select=document.getElementById("classSelect");
+    classes.forEach(c=>{ let cd=JSON.parse(localStorage.getItem(c)); if(cd) select.innerHTML+=`<option value="${c}">${cd.name} (${c.replace("class_","")})</option>`; });
+} else {
+    classSelectArea.innerHTML='<select id="classSelect"><option value="">Select class</option></select>';
+    let select=document.getElementById("classSelect");
+    classes.forEach(c=>{ let cd=JSON.parse(localStorage.getItem(c)); if(cd) select.innerHTML+=`<option value="${c}">${cd.name} (${c.replace("class_","")})</option>`; });
+}
+
+let assignments=[];
+let currentMonth=new Date().getMonth();
+let currentYear=new Date().getFullYear();
+
+function loadAssignments(){
+    let select=document.getElementById("classSelect").value;
+    assignments=[];
+    if(!select) return;
+    let classData=JSON.parse(localStorage.getItem(select));
+    if(!classData||!classData.assignments) return;
+    assignments=classData.assignments.map((a)=>{
+        if(!a) return null;
+        if(!a.statuses) a.statuses={};
+        if(currentType==="student"&&!a.statuses[currentUser]) a.statuses[currentUser]="active";
+        return a;
+    }).filter(a=>a!==null);
+    renderAssignments();
+    renderCalendar();
+}
+
+function saveAssignments(){
+    let select=document.getElementById("classSelect").value;
+    if(!select) return;
+    let classData=JSON.parse(localStorage.getItem(select));
+    if(!classData) return;
+    classData.assignments=assignments;
+    localStorage.setItem(select,JSON.stringify(classData));
+}
+
+function renderAssignments(){
+    let activeTab=document.getElementById("activeTab");
+    let doneTab=document.getElementById("doneTab");
+    let missingTab=document.getElementById("missingTab");
+    activeTab.innerHTML=""; doneTab.innerHTML=""; missingTab.innerHTML="";
+
+    assignments.forEach((a,i)=>{
+        if(!a) return;
+        let box=document.create
