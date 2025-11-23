@@ -10,7 +10,10 @@
     .sidebar button{width:100%;padding:10px;margin-bottom:5px;color:white;background:none;border:none;text-align:left;cursor:pointer;}
     .main{margin-left:0;padding:20px;}
     .class-box{border:1px solid #ccc;padding:10px;margin:10px;border-radius:5px;cursor:pointer;}
+    .assign-box{border:1px solid #aaa;padding:10px;margin:5px;border-radius:5px;}
     .top-left{position:absolute;top:0;left:0;background:black;color:white;padding:10px;cursor:pointer;}
+    .tab-btn{padding:5px 10px;margin-right:5px;cursor:pointer;border:1px solid #ccc;border-radius:5px;}
+    .tab-selected{background:#007bff;color:white;}
     canvas{margin-top:20px;}
   </style>
 </head>
@@ -26,6 +29,8 @@
   <div id="welcome"></div>
 </div>
 <div class="main" id="main">
+
+  <!-- HOME TAB -->
   <div id="homeTab">
     <h2>Classes</h2>
     <div>
@@ -35,14 +40,27 @@
     <div id="classesContainer"></div>
     <canvas id="piechart"></canvas>
   </div>
+
+  <!-- ASSIGNMENTS TAB -->
   <div id="assignmentsTab" style="display:none;">
     <h2>Assignments</h2>
+    <div id="tabButtons">
+      <span class="tab-btn tab-selected" onclick="showAssignmentTab('active')">Active</span>
+      <span class="tab-btn" onclick="showAssignmentTab('done')">Done</span>
+      <span class="tab-btn" onclick="showAssignmentTab('missing')">Missing</span>
+    </div>
     <div id="assignmentsContainer"></div>
+    <div>
+      <button onclick="addAssignment()" id="addAssignmentBtn" style="display:none;">Add Assignment</button>
+    </div>
   </div>
+
+  <!-- CALENDAR TAB -->
   <div id="calendarTab" style="display:none;">
     <h2>Calendar</h2>
     <div id="calendarContainer">Placeholder</div>
   </div>
+
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -53,6 +71,7 @@ let currentType = sessionStorage.getItem("currentType") || localStorage.getItem(
 if(!currentUser || !currentType){ alert("Login first"); window.location.href="index.html"; }
 document.getElementById("welcome").innerText="Welcome, "+currentUser;
 
+// Sidebar toggle
 function toggleSidebar(){
   let sb=document.getElementById("sidebar");
   sb.style.display=sb.style.display==="block"?"none":"block";
@@ -123,6 +142,28 @@ function renderPie(){
   new Chart(ctx,{type:"doughnut",data:{labels:["Active","Done","Missing"],datasets:[{data:[active,done,missing],backgroundColor:["#007bff","#28a745","#dc3545"]}]},options:{plugins:{legend:{position:"bottom"}}}});
 }
 renderPie();
-</script>
-</body>
-</html>
+
+// Assignments logic
+let currentAssignmentTab="active";
+function showAssignmentTab(tab){
+  currentAssignmentTab=tab;
+  document.querySelectorAll(".tab-btn").forEach(btn=>btn.classList.remove("tab-selected"));
+  event.target.classList.add("tab-selected");
+  renderAssignments();
+}
+
+function renderAssignments(){
+  let container=document.getElementById("assignmentsContainer");
+  container.innerHTML="";
+  classes.forEach(c=>{
+    if(c.assignments){
+      c.assignments.forEach(a=>{
+        let status=a.statuses? a.statuses[currentUser] : "active";
+        if(currentType==="teacher" || status===currentAssignmentTab){
+          let div=document.createElement("div");
+          div.className="assign-box";
+          div.innerText=a.name+" | Due: "+a.due;
+          if(currentType==="teacher"){
+            let del=document.createElement("button");
+            del.innerText="Delete";
+            del.onclick=()=>{ if(confirm("Delete as
