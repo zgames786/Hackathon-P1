@@ -1,19 +1,23 @@
 // ==================== SESSION CHECK ====================
 let currentUser = sessionStorage.getItem("currentUser") || localStorage.getItem("lastUser");
 let currentType = sessionStorage.getItem("currentType") || localStorage.getItem("lastType");
-if(!currentUser || !currentType){ alert("Login first"); window.location.href="index.html"; }
+if(!currentUser || !currentType){ 
+    alert("Login first"); 
+    window.location.href="index.html"; 
+}
 
 // ==================== SIDEBAR ====================
 function toggleSidebar(){
   let sb=document.getElementById("sidebar");
   sb.style.display=sb.style.display==="block"?"none":"block";
 }
+
 function showTab(tab){
   document.getElementById("homeTab").style.display="none";
   document.getElementById("assignmentsTab").style.display="none";
   document.getElementById("calendarTab").style.display="none";
   document.getElementById(tab+"Tab").style.display="block";
-  document.getElementById("sidebar").style.display="none";
+  document.getElementById("sidebar").style.display="none"; // auto-close
 }
 
 // ==================== CLASS MANAGEMENT ====================
@@ -118,7 +122,6 @@ function renderAssignments(){
           del.innerText="Delete";
           del.onclick=()=>{ 
             if(confirm("Delete assignment?")){ 
-              // Remove from all_classes
               let all = JSON.parse(localStorage.getItem("all_classes")||"[]");
               let classIdx = all.findIndex(x=>x.code===cls.code);
               if(classIdx>=0){
@@ -145,9 +148,16 @@ function addAssignment(){
   let all = JSON.parse(localStorage.getItem("all_classes")||"[]");
   let cls = all.find(x=>x.code===classCode);
   if(!cls){ alert("Class not found"); return; }
+
   let name=prompt("Assignment Name");
   let due=prompt("Due Date (any format)");
-  if(!name || !due) return;
+
+  let parsedDate=parseDueDate(due);
+  if(!parsedDate){
+    alert(`"${due}" is not a valid date! Please enter a valid date format.`);
+    return;
+  }
+
   let assignment={name:name,due:due,statuses:{}};
   cls.assignments.push(assignment);
   localStorage.setItem("all_classes",JSON.stringify(all));
@@ -162,13 +172,16 @@ let calendarMonth = today.getMonth();
 let calendarYear = today.getFullYear();
 
 function parseDueDate(due){
-  let parsed = new Date(due);
-  if(!isNaN(parsed)) return parsed;
-  let match = due.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
-  if(match){
-    return new Date(match[3], match[1]-1, match[2]);
-  }
-  return null;
+    let parsed = new Date(due);
+    if(!isNaN(parsed)) return parsed;
+
+    let match = due.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+    if(match) return new Date(match[3], match[1]-1, match[2]);
+
+    let textDate = Date.parse(due);
+    if(!isNaN(textDate)) return new Date(textDate);
+
+    return null;
 }
 
 function renderCalendar(){
@@ -180,7 +193,7 @@ function renderCalendar(){
   let firstDay = new Date(calendarYear, calendarMonth,1).getDay();
   let lastDate = new Date(calendarYear,calendarMonth+1,0).getDate();
 
-  for(let i=0;i<firstDay;i++){ let empty=document.createElement("div"); container.appendChild(empty); }
+  for(let i=0;i<firstDay;i++){ container.appendChild(document.createElement("div")); }
 
   let allClasses = JSON.parse(localStorage.getItem("all_classes")||"[]");
 
@@ -214,3 +227,19 @@ renderCalendar();
 
 function prevMonth(){ calendarMonth--; if(calendarMonth<0){ calendarMonth=11; calendarYear--; } renderCalendar(); }
 function nextMonth(){ calendarMonth++; if(calendarMonth>11){ calendarMonth=0; calendarYear++; } renderCalendar(); }
+
+// ==================== USER GUIDE ====================
+let guideContainer = document.getElementById("userGuide");
+if(guideContainer){
+  guideContainer.innerHTML=`
+    <h3>How to use Homework Tracker MVP:</h3>
+    <ul>
+      <li>Create a teacher or student account on the login page.</li>
+      <li>Teachers: Create classes and assignments. Assign due dates for each assignment.</li>
+      <li>Students: Join classes using class codes from teachers.</li>
+      <li>Students can see assignments and pie chart of completed/missing/active work.</li>
+      <li>Calendar shows assignments per day. Click tabs to switch between Home, Assignments, and Calendar.</li>
+      <li>Invalid due dates will show an alert when adding assignments.</li>
+    </ul>
+  `;
+}
