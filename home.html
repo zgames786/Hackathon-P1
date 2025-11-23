@@ -1,63 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Homework Tracker MVP - Home</title>
+<style>
+body { font-family: Arial, sans-serif; margin:0; background:#f4f4f4; }
+.menu { background:black; color:white; padding:15px; font-size:26px; cursor:pointer; position:fixed; top:0; left:0; width:100%; z-index:10; }
+.sidebar { width:200px; height:100vh; background:#222; position:fixed; top:0; left:-200px; transition:0.3s; padding-top:60px; z-index:9; }
+.sidebar a { display:block; padding:12px; color:white; text-decoration:none; font-size:18px; }
+.sidebar a:hover { background:#444; }
+.container { margin-left:20px; padding-top:80px; }
+h1 { font-size:50px; margin-bottom:0; }
+h2 { font-size:26px; margin-top:0; margin-bottom:20px; }
+input { padding:8px; margin-right:5px; border-radius:6px; border:1px solid #ccc; }
+button { padding:8px 12px; border:none; border-radius:6px; background:#333; color:white; cursor:pointer; transition:0.2s; }
+button:hover { background:#555; }
+.class-card { background:white; padding:15px; margin:10px 0; border-radius:8px; box-shadow:0 2px 10px rgba(0,0,0,0.2); display:flex; justify-content:space-between; align-items:center; }
+canvas { max-width:400px; margin-top:30px; background:white; padding:15px; border-radius:12px; box-shadow:0 2px 10px rgba(0,0,0,0.2); }
+</style>
+</head>
+<body>
+
+<div class="menu">☰</div>
+<div id="side" class="sidebar">
+  <a href="home.html">Home</a>
+  <a href="assignments.html">Assignments</a>
+  <a href="#" onclick="logout()">Logout</a>
+</div>
+
+<div class="container">
+<h1>Homework Tracker MVP</h1>
+<h2 id="welcomeText"></h2>
+
+<div id="studentControls"></div>
+<div id="teacherControls"></div>
+
+<canvas id="progressChart" width="400" height="400"></canvas>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-window.onload = function(){
-    let currentUser = sessionStorage.getItem("currentUser");
-    let currentType = sessionStorage.getItem("currentType");
-    if(!currentUser || !currentType){ alert("Not logged in"); window.location.href="index.html"; return; }
-    document.getElementById("welcomeText").innerText = "Welcome, "+currentUser;
+let currentUser=sessionStorage.getItem("currentUser");
+let currentType=sessionStorage.getItem("currentType");
+if(!currentUser || !currentType){ alert("Not logged in"); window.location.href="index.html"; }
 
-    // Only show chart for students
-    if(currentType !== "student"){
-        document.getElementById("progressChart").style.display="none";
-        return;
+document.getElementById("welcomeText").innerText="Welcome, "+currentUser;
+
+// Sidebar toggle
+let sidebar=document.getElementById("side");
+document.querySelector(".menu").addEventListener("click",()=>{sidebar.style.left=(sidebar.style.left==="0px")?"-200px":"0px";});
+document.querySelectorAll('#side a').forEach(link=>link.addEventListener('click',()=>{sidebar.style.left="-200px";}));
+window.logout=()=>{sessionStorage.clear(); window.location.href="index.html";}
+
+// STUDENT: Join Class
+if(currentType==="student"){
+    let html=`<input type="text" id="classCode" placeholder="Enter Class Code">
+              <button onclick="joinClass()">Join Class</button>`;
+    document.getElementById("studentControls").innerHTML=html;
+}
+
+// TEACHER: Create Class
+if(currentType==="teacher"){
+    let html=`<button onclick="createClass()">Create New Class</button><div id="classList"></div>`;
+    document.getElementById("teacherControls").innerHTML=html;
+    updateTeacherClasses();
+}
+
+// Join class function
+window.joinClass=function(){
+    let code=document.getElementById("classCode").value.trim();
+    if(!code){ alert("Enter a class code"); return; }
+    let key="class_"+code;
+    let classData=JSON.parse(localStorage.getItem(key));
+    if(!classData){ alert("Class code invalid"); return; }
+    if(!classData.students) classData.students=[];
+    if(!classData.students.includes(currentUser)) classData.students.push(currentUser);
+    localStorage.setItem(key,JSON.stringify(classData));
+    alert("Joined class "+classData.name);
+    updateChart();
+}
+
+// Create class function
+window.createClass=function(){
+    let name=prompt("Class Name:");
+    if(!name) return;
+    let code=Math.random().toString(36).substring(2,9).toUpperCase();
+    localStorage.setItem("class_"+code,JSON.stringify({name:name,teacher:currentUser,students:[],assignments:[]}));
+    alert("Class "+name+" created with code "+code);
+    updateTeacherClasses();
+}
+
+// Update teacher class list
+function updateTeacherClasses(){
+    let div=document.getElementById("classList");
+    div.innerHTML="";
+    for(let key in localStorage){
+        if(key.startsWith("class_")){
+            let c=JSON.parse(localStorage.getItem(key));
+            if(c.teacher===currentUser){
+                let card=document.createElement("div"); card.className="class-card";
+                card.innerHTML=`<span>${c.name} (${key.replace("class_","")})</span>
+                                <button onclick="editClassName('${key}')">Edit Name</button>`;
+                div.appendChild(card);
+            }
+        }
     }
+}
 
-    // Gather all assignments from classes student is in
+// Edit class name
+window.editClassName=function(key){
+    let c=JSON.parse(localStorage.getItem(key));
+    let newName=prompt("New Class Name",c.name);
+    if(newName){ c.name=newName; localStorage.setItem(key,JSON.stringify(c)); updateTeacherClasses(); }
+}
+
+// Chart
+function updateChart(){
+    if(currentType!=="student"){ document.getElementById("progressChart").style.display="none"; return; }
     let assignments=[];
     for(let key in localStorage){
         if(key.startsWith("class_")){
             let c=JSON.parse(localStorage.getItem(key));
-            if(c.students && c.students.includes(currentUser) && c.assignments){
-                assignments = assignments.concat(c.assignments.map(a=>{
-                    if(!a.statuses) a.statuses={};
-                    if(!a.statuses[currentUser]) a.statuses[currentUser]="active";
-                    return a;
-                }));
-            }
+            if(c.students && c.students.includes(currentUser) && c.assignments) assignments=assignments.concat(c.assignments);
         }
     }
-
-    let total = assignments.length;
-    let done = assignments.filter(a=>a.statuses[currentUser]==="done").length;
-    let missing = assignments.filter(a=>a.statuses[currentUser]==="missing").length;
-    let active = total - done - missing;
-
-    // Convert to percentages
-    let activePercent = total ? Math.round((active/total)*100) : 0;
-    let donePercent = total ? Math.round((done/total)*100) : 0;
-    let missingPercent = total ? Math.round((missing/total)*100) : 0;
-
-    // Labels show both raw count and percent
-    let labels = [
-        `Active: ${active} (${activePercent}%)`,
-        `Done: ${done} (${donePercent}%)`,
-        `Missing: ${missing} (${missingPercent}%)`
-    ];
-
-    // Render chart
+    let total=assignments.length;
+    let done=assignments.filter(a=>a.statuses && a.statuses[currentUser]==="done").length;
+    let missing=assignments.filter(a=>a.statuses && a.statuses[currentUser]==="missing").length;
+    let active=total-done-missing;
+    let labels=[`Active: ${active} (${total?Math.round(active/total*100):0}%)`,
+                `Done: ${done} (${total?Math.round(done/total*100):0}%)`,
+                `Missing: ${missing} (${total?Math.round(missing/total*100):0}%)`];
     new Chart(document.getElementById("progressChart"),{
         type:"doughnut",
-        data:{
-            labels: labels,
-            datasets:[{
-                data:[active,done,missing],
-                backgroundColor:["#f0ad4e","#5cb85c","#d9534f"]
-            }]
-        },
-        options:{
-            responsive:true,
-            plugins:{ legend:{ position:"bottom" } }
-        }
+        data:{labels:labels,datasets:[{data:[active,done,missing],backgroundColor:["#f0ad4e","#5cb85c","#d9534f"]}]},
+        options:{responsive:true,plugins:{legend:{position:"bottom"}}}
     });
 }
+updateChart();
 </script>
+</body>
+</html>
