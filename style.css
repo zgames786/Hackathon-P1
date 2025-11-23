@@ -1,29 +1,81 @@
-body { font-family: Arial, sans-serif; background:#f0f2f5; margin:0; padding:0; }
-.login-container { text-align:center; padding:50px; }
-.account-choice button { padding:15px 25px; margin:10px; font-size:18px; cursor:pointer; }
-input { display:block; margin:10px auto; padding:10px; font-size:16px; width:200px; }
-button { cursor:pointer; }
+/* ===== BODY & GENERAL ===== */
+body {
+    font-family: Arial, sans-serif;
+    background: #f0f2f5;
+    margin: 0;
+    padding: 0;
+}
 
-#sidebar { position:fixed; top:0; left:-250px; width:250px; height:100%; background-color:#222; color:#fff; transition:left 0.3s; padding:20px; z-index:1000; }
-#sidebar.show { left:0; }
-#sidebar button { display:block; margin:10px 0; width:100%; padding:10px; background:#007bff; color:#fff; border:none; border-radius:5px; font-size:16px; }
-#hamburger { font-size:30px; cursor:pointer; position:fixed; top:10px; left:10px; z-index:1100; }
-.header-title { font-size:36px; font-weight:bold; text-align:center; margin-top:20px; }
-.header-subtitle { font-size:24px; text-align:center; margin-bottom:30px; }
+/* ===== LOGIN CONTAINER ===== */
+.login-container {
+    position: relative;
+    z-index: 2000; /* ensures it is above sidebar or other elements */
+    text-align: center;
+    padding: 80px 20px;
+    min-height: 100vh;
+    background: #f0f2f5;
+}
 
-.class-box { border:2px solid #007bff; border-radius:10px; padding:15px; margin:10px; background:#fff; cursor:pointer; transition: transform 0.2s; text-align:center; }
-.class-box:hover { transform: scale(1.05); }
-.assign-box { border-radius:8px; padding:10px; margin:10px 0; background:#fff; box-shadow:0 2px 5px rgba(0,0,0,0.1); display:flex; justify-content:space-between; align-items:center; }
-.assign-box button { padding:5px 10px; margin-left:10px; border:none; border-radius:5px; cursor:pointer; font-weight:bold; }
-.assign-box button:hover { opacity:0.8; }
+/* ===== TITLE ===== */
+.login-container h1 {
+    font-size: 36px;
+    font-weight: bold;
+    margin-bottom: 20px;
+}
 
-.tab-buttons { margin:10px 0; }
-.tab-btn { padding:10px 20px; margin-right:5px; cursor:pointer; border:none; border-radius:5px; background:#ccc; }
-.tab-selected { background:#007bff; color:#fff; }
+.login-container h2 {
+    font-size: 24px;
+    margin-bottom: 40px;
+}
 
-#piechart { max-width:400px; margin:20px auto; }
+/* ===== ACCOUNT TYPE BUTTONS ===== */
+.account-choice button {
+    padding: 20px 40px;
+    margin: 10px;
+    font-size: 20px;
+    cursor: pointer;
+    border: none;
+    border-radius: 10px;
+    background: #007bff;
+    color: white;
+    transition: transform 0.2s, background 0.2s;
+    position: relative;
+    z-index: 2001; /* above everything */
+}
 
-#calendarContainer { display:grid; grid-template-columns:repeat(7,1fr); gap:5px; margin-top:20px; }
-.day-box { border:1px solid #ccc; padding:5px; min-height:80px; position:relative; border-radius:5px; background:#fff; }
-.day-number { font-weight:bold; position:absolute; top:2px; right:5px; }
-.assignment-label { display:block; background:#007bff; color:#fff; border-radius:3px; margin-top:18px; padding:2px 3px; font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.account-choice button:hover {
+    background: #0056b3;
+    transform: scale(1.05);
+}
+
+/* ===== LOGIN FORM ===== */
+#loginForm {
+    margin-top: 30px;
+    z-index: 2000;
+}
+
+#loginForm input {
+    display: block;
+    margin: 10px auto;
+    padding: 12px 15px;
+    font-size: 16px;
+    width: 250px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+}
+
+#loginForm button {
+    padding: 12px 20px;
+    margin: 10px;
+    font-size: 16px;
+    border-radius: 5px;
+    border: none;
+    background: #28a745;
+    color: white;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+#loginForm button:hover {
+    background: #218838;
+}
