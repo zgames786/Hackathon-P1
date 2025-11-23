@@ -33,14 +33,14 @@
     <button class="tab-btn" onclick="showAssignmentTab('missing')">Missing</button>
   </div>
   <div id="assignmentsContainer"></div>
-  <button id="addAssignmentBtn" onclick="addAssignment()" style="display:none;">Add Assignment</button>
+  <button id="addAssignmentBtn" onclick="addAssignment()">Add Assignment</button>
 </div>
 
 <div id="calendarTab" style="display:none;">
   <div id="calendarHeader">
-    <button id="prevMonthBtn">⬅️</button>
+    <button id="prevMonthBtn" onclick="prevMonth()">⬅️</button>
     <span id="monthYear"></span>
-    <button id="nextMonthBtn">➡️</button>
+    <button id="nextMonthBtn" onclick="nextMonth()">➡️</button>
   </div>
   <div id="calendarContainer"></div>
 </div>
