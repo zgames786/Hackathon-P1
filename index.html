@@ -1,138 +1,71 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
-<title>Homework Tracker MVP - Assignments</title>
-<style>
-body { font-family: Arial, sans-serif; margin:0; background:#f4f4f4; }
-.menu { background:black; color:white; padding:15px; font-size:26px; cursor:pointer; position:fixed; top:0; left:0; width:100%; z-index:10; }
-.sidebar { width:200px; height:100vh; background:#222; position:fixed; top:0; left:-200px; transition:0.3s; padding-top:60px; z-index:9; }
-.sidebar a { display:block; padding:12px; color:white; text-decoration:none; font-size:18px; }
-.sidebar a:hover { background:#444; }
-.section { margin-top:90px; margin-left:20px; margin-right:20px; }
-h1 { font-size:50px; margin-bottom:0; }
-h2 { font-size:26px; margin-top:0; margin-bottom:20px; }
-.tab { margin-bottom: 15px; }
-.tab button { margin-right:5px; padding:8px 12px; border:none; border-radius:6px; cursor:pointer; }
-.tab button.active { background:black; color:white; }
-.box { padding:12px; margin-bottom:10px; border-radius:8px; background:#eee; border-left:6px solid #666; color:black; display:flex; justify-content: space-between; align-items: center; flex-wrap:wrap; }
-.assign-buttons button { margin-left:5px; padding:4px 6px; border:none; border-radius:4px; cursor:pointer; }
-input { margin:5px; padding:5px; }
-canvas {margin:10px;}
-#calendar { display:none; margin-top:20px; }
-#calendar header { display:flex; justify-content:space-between; align-items:center; }
-#calendar-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:5px; margin-top:10px; }
-.day-box { background:white; padding:8px; border-radius:6px; min-height:80px; box-shadow:0 1px 5px rgba(0,0,0,0.2); font-size:14px; overflow:hidden; position:relative; }
-.day-number { font-weight:bold; margin-bottom:4px; }
-.day-assign { display:block; font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-</style>
+  <title>Login - Homework Tracker MVP</title>
+  <style>
+    body{font-family:sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;background:#f0f0f0;}
+    .container{background:white;padding:30px;border-radius:10px;box-shadow:0 0 10px rgba(0,0,0,0.2);}
+    input, button{padding:10px;margin:5px;width:200px;}
+    #msg{color:red;}
+    .role-btn{padding:10px 20px;margin:5px;cursor:pointer;}
+    .role-selected{background:#007bff;color:white;}
+  </style>
 </head>
 <body>
-
-<div class="menu">☰</div>
-<div id="side" class="sidebar">
-  <a href="home.html">Home</a>
-  <a href="assignments.html">Assignments</a>
-  <a href="#" onclick="logout()">Logout</a>
+<div class="container">
+  <h1>Homework Tracker MVP</h1>
+  <div>
+    <button id="studentBtn" class="role-btn">Student</button>
+    <button id="teacherBtn" class="role-btn">Teacher</button>
+  </div>
+  <input type="text" id="username" placeholder="Username">
+  <input type="password" id="password" placeholder="Password">
+  <button onclick="login()">Login</button>
+  <button onclick="createAccount()">Create Account</button>
+  <div id="msg"></div>
 </div>
 
-<div class="section">
-<h1>Homework Tracker MVP</h1>
-<h2 id="welcomeText"></h2>
-
-<div id="classSelectArea"></div>
-
-<div class="tab">
-  <button class="active" data-tab="active">Active</button>
-  <button data-tab="done">Done</button>
-  <button data-tab="missing">Missing</button>
-  <button data-tab="calendar">Calendar</button>
-</div>
-
-<div id="activeTab"></div>
-<div id="doneTab" style="display:none;"></div>
-<div id="missingTab" style="display:none;"></div>
-<div id="calendar">
-    <header>
-        <button id="prevMonth">&lt;</button>
-        <h2 id="monthYear"></h2>
-        <button id="nextMonth">&gt;</button>
-    </header>
-    <div id="calendar-grid"></div>
-</div>
-
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-window.onload=function(){
-let currentUser=sessionStorage.getItem("currentUser");
-let currentType=sessionStorage.getItem("currentType");
-if(!currentUser||!currentType){alert("Not logged in"); window.location.href="index.html"; return;}
-document.getElementById("welcomeText").innerText="Welcome, "+currentUser;
-
-// Sidebar toggle
-let sidebar=document.getElementById("side");
-document.querySelector(".menu").addEventListener('click',()=>{sidebar.style.left=(sidebar.style.left==="0px")?"-200px":"0px";});
-document.querySelectorAll('#side a').forEach(link=>link.addEventListener('click',()=>{ sidebar.style.left="-200px"; }));
-window.logout=()=>{sessionStorage.clear(); window.location.href="index.html";}
-
-// Classes
-let classes=[];
-for(let key in localStorage){
-    if(key.startsWith("class_")){
-        let c=JSON.parse(localStorage.getItem(key));
-        if(currentType==="student"&&c.students&&c.students.includes(currentUser)) classes.push(key);
-        if(currentType==="teacher"&&c.teacher===currentUser) classes.push(key);
-    }
+let role=null;
+document.getElementById("studentBtn").onclick=()=>{
+  role="student";
+  document.getElementById("studentBtn").classList.add("role-selected");
+  document.getElementById("teacherBtn").classList.remove("role-selected");
+}
+document.getElementById("teacherBtn").onclick=()=>{
+  role="teacher";
+  document.getElementById("teacherBtn").classList.add("role-selected");
+  document.getElementById("studentBtn").classList.remove("role-selected");
 }
 
-let classSelectArea=document.getElementById("classSelectArea");
-if(currentType==="teacher"){
-    classSelectArea.innerHTML='<select id="classSelect"><option value="">Select class</option></select> <button onclick="addAssignment()">Add Assignment</button>';
-    let select=document.getElementById("classSelect");
-    classes.forEach(c=>{ let cd=JSON.parse(localStorage.getItem(c)); if(cd) select.innerHTML+=`<option value="${c}">${cd.name} (${c.replace("class_","")})</option>`; });
-} else {
-    classSelectArea.innerHTML='<select id="classSelect"><option value="">Select class</option></select>';
-    let select=document.getElementById("classSelect");
-    classes.forEach(c=>{ let cd=JSON.parse(localStorage.getItem(c)); if(cd) select.innerHTML+=`<option value="${c}">${cd.name} (${c.replace("class_","")})</option>`; });
+function login(){
+  let user=document.getElementById("username").value.trim();
+  let pass=document.getElementById("password").value.trim();
+  let msg=document.getElementById("msg");
+  msg.innerText="";
+  if(!role){ msg.innerText="Select Student or Teacher"; return; }
+  if(!user || !pass){ msg.innerText="Fill username and password"; return; }
+  let key = role+"_"+user;
+  let data = JSON.parse(localStorage.getItem(key));
+  if(!data || data.password!==pass){ msg.innerText="Invalid login"; return; }
+  sessionStorage.setItem("currentUser",user);
+  sessionStorage.setItem("currentType",role);
+  localStorage.setItem("lastUser",user);
+  localStorage.setItem("lastType",role);
+  window.location.href="home.html";
 }
 
-let assignments=[];
-let currentMonth=new Date().getMonth();
-let currentYear=new Date().getFullYear();
-
-function loadAssignments(){
-    let select=document.getElementById("classSelect").value;
-    assignments=[];
-    if(!select) return;
-    let classData=JSON.parse(localStorage.getItem(select));
-    if(!classData||!classData.assignments) return;
-    assignments=classData.assignments.map((a)=>{
-        if(!a) return null;
-        if(!a.statuses) a.statuses={};
-        if(currentType==="student"&&!a.statuses[currentUser]) a.statuses[currentUser]="active";
-        return a;
-    }).filter(a=>a!==null);
-    renderAssignments();
-    renderCalendar();
+function createAccount(){
+  let user=prompt("Choose Username").trim();
+  if(!user) return;
+  let pass=prompt("Choose Password").trim();
+  if(!pass) return;
+  if(!role){ alert("Select Student or Teacher"); return; }
+  let key=role+"_"+user;
+  if(localStorage.getItem(key)){ alert("Account exists"); return; }
+  localStorage.setItem(key,JSON.stringify({password:pass,classes:[],assignments:[]}));
+  alert("Account created! You can now login.");
 }
-
-function saveAssignments(){
-    let select=document.getElementById("classSelect").value;
-    if(!select) return;
-    let classData=JSON.parse(localStorage.getItem(select));
-    if(!classData) return;
-    classData.assignments=assignments;
-    localStorage.setItem(select,JSON.stringify(classData));
-}
-
-function renderAssignments(){
-    let activeTab=document.getElementById("activeTab");
-    let doneTab=document.getElementById("doneTab");
-    let missingTab=document.getElementById("missingTab");
-    activeTab.innerHTML=""; doneTab.innerHTML=""; missingTab.innerHTML="";
-
-    assignments.forEach((a,i)=>{
-        if(!a) return;
-        let box=document.create
+</script>
+</body>
+</html>
