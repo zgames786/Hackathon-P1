@@ -1,75 +1,81 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Login - Homework Tracker MVP</title>
+  <meta charset="UTF-8">
+  <title>Homework Tracker Login</title>
   <style>
-    body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #f5f5f5; }
-    .login-container { background: white; padding: 40px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.2); text-align: center; width: 350px; }
-    .role-btn { padding: 10px 20px; margin: 10px; cursor: pointer; border: none; border-radius: 5px; font-size: 16px; }
-    #roleSelection { margin-bottom: 20px; }
-    input { width: 90%; padding: 10px; margin: 10px 0; border-radius: 5px; border: 1px solid #ccc; font-size: 16px; }
-    button { padding: 10px 20px; margin: 10px; font-size: 16px; border-radius: 5px; cursor: pointer; }
+    body{margin:0;font-family:sans-serif;text-align:center;}
+    .container{margin-top:100px;}
+    .role-box{display:inline-block;width:150px;height:150px;margin:20px;border:2px solid #333;border-radius:10px;cursor:pointer;padding:10px;}
+    .role-box h2{margin-top:20px;}
+    input{margin:5px;padding:5px;}
+    button{padding:5px 10px;margin:5px;}
   </style>
 </head>
 <body>
-
-<div class="login-container">
-  <h2>Homework Tracker MVP</h2>
-
-  <div id="roleSelection">
-    <button class="role-btn" onclick="setRole('student')">Student</button>
-    <button class="role-btn" onclick="setRole('teacher')">Teacher</button>
+  <div class="container">
+    <h1>Homework Tracker Login</h1>
+    <div>
+      <div class="role-box" onclick="selectRole('student')">
+        <div style="font-size:50px;">📚</div>
+        <h2>Student</h2>
+      </div>
+      <div class="role-box" onclick="selectRole('teacher')">
+        <div style="font-size:50px;">✏️</div>
+        <h2>Teacher</h2>
+      </div>
+    </div>
+    <div id="loginForm" style="display:none;margin-top:20px;">
+      <h3 id="roleTitle"></h3>
+      <input type="text" id="username" placeholder="Username"><br>
+      <input type="password" id="password" placeholder="Password"><br>
+      <button onclick="login()">Login</button>
+      <button onclick="createAccount()">Create Account</button>
+    </div>
   </div>
-
-  <div id="loginForm" style="display:none;">
-    <input type="text" id="username" placeholder="Username"><br>
-    <input type="password" id="password" placeholder="Password"><br>
-    <button onclick="login()">Login</button>
-    <button onclick="createAccount()">Create Account</button>
-  </div>
-
-</div>
 
 <script>
-let currentRole = null;
+let selectedRole="";
 
-function setRole(role){
-  currentRole = role;
-  document.getElementById("loginForm").style.display = "block";
-  document.getElementById("roleSelection").style.display = "none";
+function selectRole(role){
+  selectedRole = role;
+  document.getElementById("loginForm").style.display="block";
+  document.getElementById("roleTitle").innerText = role.charAt(0).toUpperCase() + role.slice(1) + " Login";
+}
+
+function getUserDB(){
+  return JSON.parse(localStorage.getItem(selectedRole+"_users")||"{}");
+}
+
+function saveUserDB(db){
+  localStorage.setItem(selectedRole+"_users", JSON.stringify(db));
 }
 
 function createAccount(){
-  let username = document.getElementById("username").value.trim();
-  let password = document.getElementById("password").value;
-  if(!username || !password){ alert("Enter username and password"); return; }
-
-  let key = currentRole+"_users";
-  let users = JSON.parse(localStorage.getItem(key)||"{}");
-  if(users[username]){ alert("Username already exists"); return; }
-  users[username] = password;
-  localStorage.setItem(key, JSON.stringify(users));
-  alert("Account created! You can now login.");
+  let username=document.getElementById("username").value.trim();
+  let password=document.getElementById("password").value.trim();
+  if(!username || !password){ alert("Enter both"); return; }
+  let db = getUserDB();
+  if(db[username]){ alert("User exists"); return; }
+  db[username] = password;
+  saveUserDB(db);
+  alert("Account created!");
 }
 
 function login(){
-  let username = document.getElementById("username").value.trim();
-  let password = document.getElementById("password").value;
-  if(!username || !password){ alert("Enter username and password"); return; }
-
-  let key = currentRole+"_users";
-  let users = JSON.parse(localStorage.getItem(key)||"{}");
-  if(users[username] && users[username] === password){
+  let username=document.getElementById("username").value.trim();
+  let password=document.getElementById("password").value.trim();
+  let db = getUserDB();
+  if(db[username] && db[username]===password){
     sessionStorage.setItem("currentUser", username);
-    sessionStorage.setItem("currentType", currentRole);
+    sessionStorage.setItem("currentType", selectedRole);
     localStorage.setItem("lastUser", username);
-    localStorage.setItem("lastType", currentRole);
-    window.location.href = "home.html";
+    localStorage.setItem("lastType", selectedRole);
+    window.location.href="home.html";
   } else {
-    alert("Invalid username or password");
+    alert("Invalid login");
   }
 }
 </script>
-
 </body>
 </html>
