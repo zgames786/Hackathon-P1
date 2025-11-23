@@ -1,47 +1,45 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Home - Homework Tracker MVP</title>
+  <meta charset="UTF-8">
+  <title>Homework Tracker MVP</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    body{font-family:sans-serif;margin:0;padding:0;}
-    .header{background:black;color:white;padding:20px;text-align:center;}
-    #welcome{margin-top:5px;font-size:18px;}
-    .sidebar{width:200px;background:#333;color:white;position:fixed;top:0;left:0;height:100%;padding-top:50px;display:none;}
-    .sidebar button{width:100%;padding:10px;margin-bottom:5px;color:white;background:none;border:none;text-align:left;cursor:pointer;}
-    .main{margin-left:0;padding:20px;}
-    .class-box{border:1px solid #ccc;padding:10px;margin:10px;border-radius:5px;cursor:pointer;}
-    .assign-box{border:1px solid #aaa;padding:10px;margin:5px;border-radius:5px;}
-    .top-left{position:absolute;top:0;left:0;background:black;color:white;padding:10px;cursor:pointer;}
-    .tab-btn{padding:5px 10px;margin-right:5px;cursor:pointer;border:1px solid #ccc;border-radius:5px;}
-    .tab-selected{background:#007bff;color:white;}
-    canvas{margin-top:20px;}
+    body{margin:0;font-family:sans-serif;}
+    #sidebar{width:200px;background:#333;color:white;height:100vh;position:fixed;top:0;left:0;display:none;padding:10px;}
+    #content{margin-left:0;padding:20px;transition:margin-left 0.3s;}
+    .sidebar-btn{display:block;color:white;text-decoration:none;margin:10px 0;cursor:pointer;}
+    .tab-btn{padding:5px 10px;margin:5px;cursor:pointer;border:1px solid #333;}
+    .tab-selected{background:#333;color:white;}
+    #classesContainer .class-box, #assignmentsContainer .assign-box{border:1px solid #ccc;padding:5px;margin:5px;}
     #calendarContainer{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;}
-    .day-box{border:1px solid #ccc;padding:5px;min-height:50px;position:relative;}
+    .day-box{border:1px solid #ccc;min-height:50px;padding:2px;}
     .day-number{font-weight:bold;}
-    .assignment-label{font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-    .month-nav{text-align:center;margin-bottom:10px;}
-    .month-nav button{margin:0 10px;}
+    #toggleSidebar{cursor:pointer;font-size:24px;}
+    h1,h2{text-align:center;}
+    #piechart{max-width:300px;margin:auto;}
   </style>
 </head>
 <body>
-<div class="top-left" onclick="toggleSidebar()">☰</div>
-<div class="sidebar" id="sidebar">
-  <button onclick="showTab('home')">Home</button>
-  <button onclick="showTab('assignments')">Assignments</button>
-  <button onclick="showTab('calendar')">Calendar</button>
-</div>
-<div class="header">
-  <h1>Homework Tracker MVP</h1>
-  <div id="welcome"></div>
-</div>
-<div class="main" id="main">
 
+<!-- SIDEBAR -->
+<div id="sidebar">
+  <div class="sidebar-btn" onclick="showTab('home')">Home</div>
+  <div class="sidebar-btn" onclick="showTab('assignments')">Assignments</div>
+  <div class="sidebar-btn" onclick="showTab('calendar')">Calendar</div>
+</div>
+
+<!-- MAIN CONTENT -->
+<div id="content">
+  <div id="toggleSidebar" onclick="toggleSidebar()">☰</div>
+  
   <!-- HOME TAB -->
   <div id="homeTab">
-    <h2>Classes</h2>
+    <h1>Homework Tracker MVP</h1>
+    <h2>Welcome, <span id="usernameDisplay"></span></h2>
     <div>
       <button onclick="joinClass()">Join Class</button>
-      <button onclick="createClass()">Create Class</button>
+      <button onclick="createClass()" id="createClassBtn">Create Class</button>
     </div>
     <div id="classesContainer"></div>
     <canvas id="piechart"></canvas>
@@ -49,228 +47,37 @@
 
   <!-- ASSIGNMENTS TAB -->
   <div id="assignmentsTab" style="display:none;">
-    <h2>Assignments</h2>
-    <div id="tabButtons">
-      <span class="tab-btn tab-selected" onclick="showAssignmentTab('active')">Active</span>
-      <span class="tab-btn" onclick="showAssignmentTab('done')">Done</span>
-      <span class="tab-btn" onclick="showAssignmentTab('missing')">Missing</span>
-    </div>
-    <div id="assignmentsContainer"></div>
+    <h1 id="assignmentsTitle">Assignments</h1>
     <div>
+      <button class="tab-btn tab-selected" onclick="showAssignmentTab('active')">Active</button>
+      <button class="tab-btn" onclick="showAssignmentTab('done')">Done</button>
+      <button class="tab-btn" onclick="showAssignmentTab('missing')">Missing</button>
       <button onclick="addAssignment()" id="addAssignmentBtn" style="display:none;">Add Assignment</button>
     </div>
+    <div id="assignmentsContainer"></div>
   </div>
 
   <!-- CALENDAR TAB -->
   <div id="calendarTab" style="display:none;">
-    <div class="month-nav">
-      <button onclick="prevMonth()">◀</button>
+    <h1>Calendar</h1>
+    <div>
+      <button onclick="prevMonth()">&lt;</button>
       <span id="monthYear"></span>
-      <button onclick="nextMonth()">▶</button>
+      <button onclick="nextMonth()">&gt;</button>
     </div>
     <div id="calendarContainer"></div>
   </div>
-
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- LINK TO JS -->
+<script src="app.js"></script>
 <script>
-// ✅ Session check
-let currentUser = sessionStorage.getItem("currentUser") || localStorage.getItem("lastUser");
-let currentType = sessionStorage.getItem("currentType") || localStorage.getItem("lastType");
-if(!currentUser || !currentType){ alert("Login first"); window.location.href="index.html"; }
-document.getElementById("welcome").innerText="Welcome, "+currentUser;
+  // Display username
+  document.getElementById("usernameDisplay").innerText = currentUser;
 
-// Sidebar toggle
-function toggleSidebar(){
-  let sb=document.getElementById("sidebar");
-  sb.style.display=sb.style.display==="block"?"none":"block";
-}
-function showTab(tab){
-  document.getElementById("homeTab").style.display="none";
-  document.getElementById("assignmentsTab").style.display="none";
-  document.getElementById("calendarTab").style.display="none";
-  document.getElementById(tab+"Tab").style.display="block";
-  document.getElementById("sidebar").style.display="none";
-}
-
-// Classes
-let classes = JSON.parse(localStorage.getItem(currentUser+"_classes")||"[]");
-function renderClasses(){
-  let container=document.getElementById("classesContainer");
-  container.innerHTML="";
-  classes.forEach(c=>{
-    let div=document.createElement("div");
-    div.className="class-box";
-    div.innerText=c.name+" - Code: "+c.code;
-    container.appendChild(div);
-  });
-}
-renderClasses();
-
-function joinClass(){
-  let code=prompt("Enter class code");
-  if(!code) return;
-  let all=JSON.parse(localStorage.getItem("all_classes")||"[]");
-  let cls=all.find(c=>c.code===code);
-  if(!cls){ alert("Class not found"); return; }
-  if(classes.find(c=>c.code===code)){ alert("Already joined"); return; }
-  classes.push(cls);
-  localStorage.setItem(currentUser+"_classes",JSON.stringify(classes));
-  renderClasses();
-  renderPie();
-  alert("Class joined!");
-}
-
-function createClass(){
-  if(currentType!=="teacher"){ alert("Only teachers can create classes"); return; }
-  let name=prompt("Class Name");
-  if(!name) return;
-  let code=Math.random().toString(36).substring(2,9).toUpperCase();
-  let cls={name:name,code:code,assignments:[]};
-  classes.push(cls);
-  localStorage.setItem(currentUser+"_classes",JSON.stringify(classes));
-  let all=JSON.parse(localStorage.getItem("all_classes")||"[]");
-  all.push(cls);
-  localStorage.setItem("all_classes",JSON.stringify(all));
-  renderClasses();
-  alert("Class created! Code: "+code);
-}
-
-// Pie chart
-function renderPie(){
-  if(currentType!=="student") return;
-  let active=0,done=0,missing=0;
-  classes.forEach(c=>{
-    (c.assignments||[]).forEach(a=>{
-      let status=a.statuses? a.statuses[currentUser]:"active";
-      if(status==="active") active++;
-      else if(status==="done") done++;
-      else if(status==="missing") missing++;
-    });
-  });
-  let ctx=document.getElementById("piechart").getContext("2d");
-  new Chart(ctx,{type:"doughnut",data:{labels:["Active","Done","Missing"],datasets:[{data:[active,done,missing],backgroundColor:["#007bff","#28a745","#dc3545"]}]},options:{plugins:{legend:{position:"bottom"}}}});
-}
-renderPie();
-
-// Assignments logic
-let currentAssignmentTab="active";
-function showAssignmentTab(tab){
-  currentAssignmentTab=tab;
-  document.querySelectorAll(".tab-btn").forEach(btn=>btn.classList.remove("tab-selected"));
-  event.target.classList.add("tab-selected");
-  renderAssignments();
-}
-
-function renderAssignments(){
-  let container=document.getElementById("assignmentsContainer");
-  container.innerHTML="";
-  classes.forEach(c=>{
-    if(c.assignments){
-      c.assignments.forEach(a=>{
-        let status=a.statuses? a.statuses[currentUser] : "active";
-        if(currentType==="teacher" || status===currentAssignmentTab){
-          let div=document.createElement("div");
-          div.className="assign-box";
-          div.innerText=a.name+" | Due: "+a.due;
-          if(currentType==="teacher"){
-            let del=document.createElement("button");
-            del.innerText="Delete";
-            del.onclick=()=>{ if(confirm("Delete assignment?")){ c.assignments=c.assignments.filter(x=>x!==a); saveClasses(); renderAssignments(); renderCalendar(); } };
-            div.appendChild(del);
-          }
-          container.appendChild(div);
-        }
-      });
-    }
-  });
-  if(currentType==="teacher") document.getElementById("addAssignmentBtn").style.display="inline-block";
-}
-renderAssignments();
-
-function addAssignment(){
-  let classCode=prompt("Enter class code for this assignment");
-  let cls=classes.find(c=>c.code===classCode);
-  if(!cls){ alert("Class not found"); return; }
-  let name=prompt("Assignment Name");
-  let due=prompt("Due Date (ex: 11/23/2025 12PM)");
-  if(!name || !due) return;
-  let assignment={name:name,due:due,statuses:{}};
-  cls.assignments.push(assignment);
-  saveClasses();
-  renderAssignments();
-  renderPie();
-  renderCalendar();
-}
-
-function saveClasses(){
-  localStorage.setItem(currentUser+"_classes",JSON.stringify(classes));
-  let all=JSON.parse(localStorage.getItem("all_classes")||"[]");
-  classes.forEach(c=>{
-    let idx=all.findIndex(x=>x.code===c.code);
-    if(idx>=0) all[idx]=c;
-  });
-  localStorage.setItem("all_classes",JSON.stringify(all));
-}
-
-// Calendar logic
-let today = new Date();
-let calendarMonth = today.getMonth();
-let calendarYear = today.getFullYear();
-
-function renderCalendar(){
-  let container=document.getElementById("calendarContainer");
-  container.innerHTML="";
-  document.getElementById("monthYear").innerText = new Date(calendarYear,calendarMonth).toLocaleString('default',{month:'long',year:'numeric'});
-  
-  let firstDay = new Date(calendarYear, calendarMonth,1).getDay();
-  let lastDate = new Date(calendarYear,calendarMonth+1,0).getDate();
-  
-  // Fill empty days
-  for(let i=0;i<firstDay;i++){
-    let empty=document.createElement("div");
-    container.appendChild(empty);
-  }
-  
-  // Fill days
-  for(let d=1;d<=lastDate;d++){
-    let dayDiv=document.createElement("div");
-    dayDiv.className="day-box";
-    let dayNum=document.createElement("div");
-    dayNum.className="day-number";
-    dayNum.innerText=d;
-    dayDiv.appendChild(dayNum);
-    
-    // Add assignments
-    classes.forEach(c=>{
-      (c.assignments||[]).forEach(a=>{
-        let adate=new Date(a.due);
-        if(adate.getFullYear()===calendarYear && adate.getMonth()===calendarMonth && adate.getDate()===d){
-          let lbl=document.createElement("div");
-          lbl.className="assignment-label";
-          lbl.title=a.name;
-          lbl.innerText=a.name.length>15 ? a.name.substring(0,15)+"..." : a.name;
-          dayDiv.appendChild(lbl);
-        }
-      });
-    });
-    
-    container.appendChild(dayDiv);
-  }
-}
-renderCalendar();
-
-function prevMonth(){
-  calendarMonth--;
-  if(calendarMonth<0){ calendarMonth=11; calendarYear--;}
-  renderCalendar();
-}
-function nextMonth(){
-  calendarMonth++;
-  if(calendarMonth>11){ calendarMonth=0; calendarYear++;}
-  renderCalendar();
-}
+  // Show/hide create class button for teachers
+  if(currentType!=="teacher") document.getElementById("createClassBtn").style.display="none";
 </script>
+
 </body>
 </html>
