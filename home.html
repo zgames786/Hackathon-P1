@@ -1,143 +1,177 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
-<title>Homework Tracker MVP - Home</title>
-<style>
-body { font-family: Arial, sans-serif; margin:0; background:#f4f4f4; }
-.menu { background:black; color:white; padding:15px; font-size:26px; cursor:pointer; position:fixed; top:0; left:0; width:100%; z-index:10; }
-.sidebar { width:200px; height:100vh; background:#222; position:fixed; top:0; left:-200px; transition:0.3s; padding-top:60px; z-index:9; }
-.sidebar a { display:block; padding:12px; color:white; text-decoration:none; font-size:18px; }
-.sidebar a:hover { background:#444; }
-.container { margin-left:20px; padding-top:80px; }
-h1 { font-size:50px; margin-bottom:0; }
-h2 { font-size:26px; margin-top:0; margin-bottom:20px; }
-input { padding:8px; margin-right:5px; border-radius:6px; border:1px solid #ccc; }
-button { padding:8px 12px; border:none; border-radius:6px; background:#333; color:white; cursor:pointer; transition:0.2s; }
-button:hover { background:#555; }
-.class-card { background:white; padding:15px; margin:10px 0; border-radius:8px; box-shadow:0 2px 10px rgba(0,0,0,0.2); display:flex; justify-content:space-between; align-items:center; }
-canvas { max-width:400px; margin-top:30px; background:white; padding:15px; border-radius:12px; box-shadow:0 2px 10px rgba(0,0,0,0.2); }
-</style>
+  <title>Home - Homework Tracker MVP</title>
+  <style>
+    body{font-family:sans-serif;margin:0;padding:0;}
+    .header{background:black;color:white;padding:20px;text-align:center;}
+    #welcome{margin-top:10px;font-size:20px;}
+    .sidebar{width:200px;background:#333;color:white;position:fixed;top:0;left:0;height:100%;padding-top:50px;display:none;}
+    .sidebar button{width:100%;padding:10px;margin-bottom:5px;color:white;background:none;border:none;text-align:left;cursor:pointer;}
+    .main{margin-left:0;padding:20px;}
+    .class-box{border:1px solid #ccc;padding:10px;margin:10px;border-radius:5px;}
+    #piechart{width:200px;height:200px;}
+    .top-left{position:absolute;top:0;left:0;background:black;color:white;padding:10px;cursor:pointer;}
+  </style>
 </head>
 <body>
-
-<div class="menu">☰</div>
-<div id="side" class="sidebar">
-  <a href="home.html">Home</a>
-  <a href="assignments.html">Assignments</a>
-  <a href="#" onclick="logout()">Logout</a>
+<div class="top-left" onclick="toggleSidebar()">☰</div>
+<div class="sidebar" id="sidebar">
+  <button onclick="showTab('home')">Home</button>
+  <button onclick="showTab('assignments')">Assignments</button>
+  <button onclick="showTab('calendar')">Calendar</button>
 </div>
-
-<div class="container">
-<h1>Homework Tracker MVP</h1>
-<h2 id="welcomeText"></h2>
-
-<div id="studentControls"></div>
-<div id="teacherControls"></div>
-
-<canvas id="progressChart" width="400" height="400"></canvas>
+<div class="header">
+  <h1>Homework Tracker MVP</h1>
+  <div id="welcome"></div>
+</div>
+<div class="main" id="main">
+  <div id="homeTab">
+    <h2>Your Classes</h2>
+    <div>
+      <button onclick="joinClass()">Join Class</button>
+      <button onclick="createClass()">Create Class</button>
+    </div>
+    <div id="classesContainer"></div>
+    <canvas id="piechart"></canvas>
+  </div>
+  <div id="assignmentsTab" style="display:none;">
+    <h2>Assignments</h2>
+    <div id="activeTab"></div>
+    <div id="doneTab" style="display:none;"></div>
+    <div id="missingTab" style="display:none;"></div>
+  </div>
+  <div id="calendarTab" style="display:none;">
+    <button id="prevMonth">◀</button>
+    <span id="monthYear"></span>
+    <button id="nextMonth">▶</button>
+    <div id="calendar-grid" style="display:grid;grid-template-columns:repeat(7,1fr);grid-gap:5px;margin-top:10px;"></div>
+  </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-let currentUser=sessionStorage.getItem("currentUser");
-let currentType=sessionStorage.getItem("currentType");
-if(!currentUser || !currentType){ alert("Not logged in"); window.location.href="index.html"; }
-
-document.getElementById("welcomeText").innerText="Welcome, "+currentUser;
-
-// Sidebar toggle
-let sidebar=document.getElementById("side");
-document.querySelector(".menu").addEventListener("click",()=>{sidebar.style.left=(sidebar.style.left==="0px")?"-200px":"0px";});
-document.querySelectorAll('#side a').forEach(link=>link.addEventListener('click',()=>{sidebar.style.left="-200px";}));
-window.logout=()=>{sessionStorage.clear(); window.location.href="index.html";}
-
-// STUDENT: Join Class
-if(currentType==="student"){
-    let html=`<input type="text" id="classCode" placeholder="Enter Class Code">
-              <button onclick="joinClass()">Join Class</button>`;
-    document.getElementById("studentControls").innerHTML=html;
+let currentUser = sessionStorage.getItem("currentUser") || localStorage.getItem("lastUser");
+let currentType = sessionStorage.getItem("currentType") || localStorage.getItem("lastType");
+if(currentUser && currentType){
+  sessionStorage.setItem("currentUser", currentUser);
+  sessionStorage.setItem("currentType", currentType);
+}else{
+  alert("Not logged in");
+  window.location.href="index.html";
 }
 
-// TEACHER: Create Class
-if(currentType==="teacher"){
-    let html=`<button onclick="createClass()">Create New Class</button><div id="classList"></div>`;
-    document.getElementById("teacherControls").innerHTML=html;
-    updateTeacherClasses();
+document.getElementById("welcome").innerText="Welcome, "+currentUser;
+
+function toggleSidebar(){
+  let sb=document.getElementById("sidebar");
+  sb.style.display=sb.style.display==="block"?"none":"block";
 }
 
-// Join class function
-window.joinClass=function(){
-    let code=document.getElementById("classCode").value.trim();
-    if(!code){ alert("Enter a class code"); return; }
-    let key="class_"+code;
-    let classData=JSON.parse(localStorage.getItem(key));
-    if(!classData){ alert("Class code invalid"); return; }
-    if(!classData.students) classData.students=[];
-    if(!classData.students.includes(currentUser)) classData.students.push(currentUser);
-    localStorage.setItem(key,JSON.stringify(classData));
-    alert("Joined class "+classData.name);
-    updateChart();
+function showTab(tab){
+  document.getElementById("homeTab").style.display="none";
+  document.getElementById("assignmentsTab").style.display="none";
+  document.getElementById("calendarTab").style.display="none";
+  if(tab==="home") document.getElementById("homeTab").style.display="block";
+  if(tab==="assignments") document.getElementById("assignmentsTab").style.display="block";
+  if(tab==="calendar") document.getElementById("calendarTab").style.display="block";
+  document.getElementById("sidebar").style.display="none";
 }
 
-// Create class function
-window.createClass=function(){
-    let name=prompt("Class Name:");
-    if(!name) return;
-    let code=Math.random().toString(36).substring(2,9).toUpperCase();
-    localStorage.setItem("class_"+code,JSON.stringify({name:name,teacher:currentUser,students:[],assignments:[]}));
-    alert("Class "+name+" created with code "+code);
-    updateTeacherClasses();
+// Simple localStorage class system
+let classes = JSON.parse(localStorage.getItem(currentUser+"_classes")||"[]");
+function renderClasses(){
+  let container=document.getElementById("classesContainer");
+  container.innerHTML="";
+  classes.forEach(c=>{
+    let div=document.createElement("div");
+    div.className="class-box";
+    div.innerText=c.name+" - Code: "+c.code;
+    container.appendChild(div);
+  });
+}
+renderClasses();
+
+function joinClass(){
+  let code=prompt("Enter class code");
+  if(!code) return;
+  let cls=JSON.parse(localStorage.getItem("all_classes")||"[]").find(c=>c.code===code);
+  if(!cls){ alert("Class not found"); return; }
+  if(classes.find(c=>c.code===code)){ alert("Already joined"); return; }
+  classes.push(cls);
+  localStorage.setItem(currentUser+"_classes",JSON.stringify(classes));
+  renderClasses();
+  alert("Class joined!");
 }
 
-// Update teacher class list
-function updateTeacherClasses(){
-    let div=document.getElementById("classList");
-    div.innerHTML="";
-    for(let key in localStorage){
-        if(key.startsWith("class_")){
-            let c=JSON.parse(localStorage.getItem(key));
-            if(c.teacher===currentUser){
-                let card=document.createElement("div"); card.className="class-card";
-                card.innerHTML=`<span>${c.name} (${key.replace("class_","")})</span>
-                                <button onclick="editClassName('${key}')">Edit Name</button>`;
-                div.appendChild(card);
-            }
-        }
-    }
+function createClass(){
+  if(currentType!=="teacher"){ alert("Only teachers can create classes"); return; }
+  let name=prompt("Class Name");
+  if(!name) return;
+  let code=Math.random().toString(36).substring(2,9).toUpperCase();
+  let cls={name:name,code:code,assignments:[]};
+  classes.push(cls);
+  localStorage.setItem(currentUser+"_classes",JSON.stringify(classes));
+  let all=JSON.parse(localStorage.getItem("all_classes")||"[]");
+  all.push(cls);
+  localStorage.setItem("all_classes",JSON.stringify(all));
+  renderClasses();
+  alert("Class created! Code: "+code);
 }
 
-// Edit class name
-window.editClassName=function(key){
-    let c=JSON.parse(localStorage.getItem(key));
-    let newName=prompt("New Class Name",c.name);
-    if(newName){ c.name=newName; localStorage.setItem(key,JSON.stringify(c)); updateTeacherClasses(); }
-}
-
-// Chart
-function updateChart(){
-    if(currentType!=="student"){ document.getElementById("progressChart").style.display="none"; return; }
-    let assignments=[];
-    for(let key in localStorage){
-        if(key.startsWith("class_")){
-            let c=JSON.parse(localStorage.getItem(key));
-            if(c.students && c.students.includes(currentUser) && c.assignments) assignments=assignments.concat(c.assignments);
-        }
-    }
-    let total=assignments.length;
-    let done=assignments.filter(a=>a.statuses && a.statuses[currentUser]==="done").length;
-    let missing=assignments.filter(a=>a.statuses && a.statuses[currentUser]==="missing").length;
-    let active=total-done-missing;
-    let labels=[`Active: ${active} (${total?Math.round(active/total*100):0}%)`,
-                `Done: ${done} (${total?Math.round(done/total*100):0}%)`,
-                `Missing: ${missing} (${total?Math.round(missing/total*100):0}%)`];
-    new Chart(document.getElementById("progressChart"),{
-        type:"doughnut",
-        data:{labels:labels,datasets:[{data:[active,done,missing],backgroundColor:["#f0ad4e","#5cb85c","#d9534f"]}]},
-        options:{responsive:true,plugins:{legend:{position:"bottom"}}}
+// Simple pie chart
+function renderPie(){
+  if(currentType!=="student") return;
+  let active=0,done=0,missing=0;
+  classes.forEach(c=>{
+    (c.assignments||[]).forEach(a=>{
+      let status=a.statuses? a.statuses[currentUser]:"active";
+      if(status==="active") active++;
+      else if(status==="done") done++;
+      else if(status==="missing") missing++;
     });
+  });
+  let ctx=document.getElementById("piechart").getContext("2d");
+  new Chart(ctx,{type:"doughnut",data:{labels:["Active","Done","Missing"],datasets:[{data:[active,done,missing],backgroundColor:["#007bff","#28a745","#dc3545"]}]},options:{plugins:{legend:{position:"bottom"}}}});
 }
-updateChart();
+renderPie();
+
+// Calendar variables
+let today=new Date();
+let currentMonth=today.getMonth();
+let currentYear=today.getFullYear();
+function renderCalendar(){
+  let grid=document.getElementById("calendar-grid");
+  let monthName=document.getElementById("monthYear");
+  grid.innerHTML="";
+  monthName.innerText=new Intl.DateTimeFormat('en-US',{month:'long'}).format(new Date(currentYear,currentMonth))+" "+currentYear;
+  let firstDay=new Date(currentYear,currentMonth,1).getDay();
+  let daysInMonth=new Date(currentYear,currentMonth+1,0).getDate();
+  for(let i=0;i<firstDay;i++){ let empty=document.createElement("div"); grid.appendChild(empty);}
+  for(let d=1;d<=daysInMonth;d++){
+    let box=document.createElement("div");
+    box.style.border="1px solid #ccc";
+    box.style.padding="5px";
+    box.style.height="80px";
+    let dayNum=document.createElement("div"); dayNum.innerText=d; box.appendChild(dayNum);
+    classes.forEach(c=>{
+      (c.assignments||[]).forEach(a=>{
+        if(!a.due) return;
+        let ad=new Date(a.due);
+        if(ad.getDate()===d && ad.getMonth()===currentMonth && ad.getFullYear()===currentYear){
+          let t=document.createElement("div"); t.style.fontSize="10px"; t.title=a.name;
+          t.innerText=a.name.length>12? a.name.substring(0,12)+"...":a.name;
+          box.appendChild(t);
+        }
+      });
+    });
+    grid.appendChild(box);
+  }
+}
+
+document.getElementById("prevMonth").onclick=()=>{ currentMonth--; if(currentMonth<0){currentMonth=11; currentYear--; } renderCalendar();}
+document.getElementById("nextMonth").onclick=()=>{ currentMonth++; if(currentMonth>11){currentMonth=0; currentYear++; } renderCalendar();}
+renderCalendar();
 </script>
 </body>
 </html>
