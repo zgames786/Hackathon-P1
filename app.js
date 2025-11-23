@@ -42,6 +42,8 @@ function joinClass(){
   localStorage.setItem(currentUser+"_"+currentType+"_classes",JSON.stringify(classes));
   renderClasses();
   renderPie();
+  renderAssignments();
+  renderCalendar();
   alert("Class joined!");
 }
 
@@ -64,8 +66,11 @@ function createClass(){
 function renderPie(){
   if(currentType!=="student") return;
   let active=0,done=0,missing=0;
+  let allClasses = JSON.parse(localStorage.getItem("all_classes")||"[]");
   classes.forEach(c=>{
-    (c.assignments||[]).forEach(a=>{
+    let cls = allClasses.find(x=>x.code===c.code);
+    if(!cls) return;
+    (cls.assignments||[]).forEach(a=>{
       if(!a.statuses) a.statuses={};
       let status = a.statuses[currentUser] || "active";
       if(status==="active") active++;
@@ -97,8 +102,11 @@ function showAssignmentTab(tab){
 function renderAssignments(){
   let container=document.getElementById("assignmentsContainer");
   container.innerHTML="";
+  let allClasses = JSON.parse(localStorage.getItem("all_classes")||"[]");
   classes.forEach(c=>{
-    (c.assignments||[]).forEach(a=>{
+    let cls = allClasses.find(x=>x.code===c.code);
+    if(!cls) return;
+    (cls.assignments||[]).forEach(a=>{
       if(!a.statuses) a.statuses={};
       let status = a.statuses[currentUser] || "active";
       if(currentType==="teacher" || status===currentAssignmentTab){
@@ -110,15 +118,13 @@ function renderAssignments(){
           del.innerText="Delete";
           del.onclick=()=>{ 
             if(confirm("Delete assignment?")){ 
-              // Remove from all_classes as well
-              let all=JSON.parse(localStorage.getItem("all_classes")||"[]");
-              let classIdx = all.findIndex(x=>x.code===c.code);
+              // Remove from all_classes
+              let all = JSON.parse(localStorage.getItem("all_classes")||"[]");
+              let classIdx = all.findIndex(x=>x.code===cls.code);
               if(classIdx>=0){
                 all[classIdx].assignments = all[classIdx].assignments.filter(x=>x!==a);
                 localStorage.setItem("all_classes",JSON.stringify(all));
               }
-              c.assignments = c.assignments.filter(x=>x!==a);
-              saveClasses();
               renderAssignments();
               renderCalendar();
               renderPie();
@@ -136,34 +142,34 @@ renderAssignments();
 
 function addAssignment(){
   let classCode=prompt("Enter class code for this assignment");
-  let cls=classes.find(c=>c.code===classCode);
+  let all = JSON.parse(localStorage.getItem("all_classes")||"[]");
+  let cls = all.find(x=>x.code===classCode);
   if(!cls){ alert("Class not found"); return; }
   let name=prompt("Assignment Name");
-  let due=prompt("Due Date (ex: 11/23/2025 12PM)");
+  let due=prompt("Due Date (any format)");
   if(!name || !due) return;
   let assignment={name:name,due:due,statuses:{}};
   cls.assignments.push(assignment);
-  
-  // Save to all_classes
-  let all=JSON.parse(localStorage.getItem("all_classes")||"[]");
-  let idx = all.findIndex(x=>x.code===cls.code);
-  if(idx>=0) all[idx]=cls;
   localStorage.setItem("all_classes",JSON.stringify(all));
-
-  saveClasses();
   renderAssignments();
   renderPie();
   renderCalendar();
-}
-
-function saveClasses(){
-  localStorage.setItem(currentUser+"_"+currentType+"_classes",JSON.stringify(classes));
 }
 
 // ==================== CALENDAR ====================
 let today = new Date();
 let calendarMonth = today.getMonth();
 let calendarYear = today.getFullYear();
+
+function parseDueDate(due){
+  let parsed = new Date(due);
+  if(!isNaN(parsed)) return parsed;
+  let match = due.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+  if(match){
+    return new Date(match[3], match[1]-1, match[2]);
+  }
+  return null;
+}
 
 function renderCalendar(){
   let container=document.getElementById("calendarContainer");
@@ -176,6 +182,8 @@ function renderCalendar(){
 
   for(let i=0;i<firstDay;i++){ let empty=document.createElement("div"); container.appendChild(empty); }
 
+  let allClasses = JSON.parse(localStorage.getItem("all_classes")||"[]");
+
   for(let d=1;d<=lastDate;d++){
     let dayDiv=document.createElement("div");
     dayDiv.className="day-box";
@@ -185,9 +193,11 @@ function renderCalendar(){
     dayDiv.appendChild(dayNum);
 
     classes.forEach(c=>{
-      (c.assignments||[]).forEach(a=>{
-        let adate=new Date(a.due);
-        if(adate.getFullYear()===calendarYear && adate.getMonth()===calendarMonth && adate.getDate()===d){
+      let cls = allClasses.find(x=>x.code===c.code);
+      if(!cls) return;
+      (cls.assignments||[]).forEach(a=>{
+        let adate=parseDueDate(a.due);
+        if(adate && adate.getFullYear()===calendarYear && adate.getMonth()===calendarMonth && adate.getDate()===d){
           let lbl=document.createElement("div");
           lbl.className="assignment-label";
           lbl.title=a.name;
