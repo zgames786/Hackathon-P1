@@ -197,6 +197,10 @@ window.onload = function() {
                     if (statsBtn) statsBtn.style.display = "none";
                 }
             }
+            
+            // Set up sidebar button event listeners as backup
+            setupSidebarButtons();
+            
             renderPieChart();
             renderClasses();
             renderAssignments();
@@ -207,38 +211,78 @@ window.onload = function() {
     }
 }
 
+function setupSidebarButtons() {
+    const sidebar = document.getElementById("sidebar");
+    if (!sidebar) return;
+    
+    const buttons = sidebar.querySelectorAll("button");
+    buttons.forEach(button => {
+        const onclick = button.getAttribute("onclick");
+        if (onclick && onclick.includes("showTab")) {
+            // Extract the tab name from onclick attribute
+            const match = onclick.match(/showTab\(['"]([^'"]+)['"]\)/);
+            if (match && match[1]) {
+                const tabName = match[1];
+                // Add click event listener as backup
+                button.addEventListener("click", function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    window.showTab(tabName);
+                });
+            }
+        }
+    });
+}
+
 function toggleSidebar() {
     document.getElementById("sidebar").classList.toggle("show");
 }
 
-function showTab(tab) {
-    // Close sidebar on mobile after clicking
-    document.getElementById("sidebar").classList.remove("show");
-    
-    ["dashboardTab", "assignmentsTab", "calendarTab", "statisticsTab", "suggestionsTab"].forEach(t => {
-        const element = document.getElementById(t);
-        if (element) element.style.display = "none";
-    });
-    
-    const targetTab = document.getElementById(tab + "Tab");
-    if (targetTab) {
-        targetTab.style.display = "block";
+// Make sure showTab is accessible globally
+window.showTab = function(tab) {
+    try {
+        // Close sidebar on mobile after clicking
+        const sidebar = document.getElementById("sidebar");
+        if (sidebar) {
+            sidebar.classList.remove("show");
+        }
+        
+        // Hide all tabs
+        const tabIds = ["dashboardTab", "assignmentsTab", "calendarTab", "statisticsTab", "suggestionsTab"];
+        tabIds.forEach(t => {
+            const element = document.getElementById(t);
+            if (element) {
+                element.style.display = "none";
+            }
+        });
+        
+        // Show the selected tab
+        const targetTab = document.getElementById(tab + "Tab");
+        if (targetTab) {
+            targetTab.style.display = "block";
+            currentTab = tab;
+            
+            // Render content based on tab
+            if (tab === "assignments") {
+                renderAssignments();
+            } else if (tab === "calendar") {
+                renderCalendar();
+            } else if (tab === "dashboard") {
+                renderPieChart();
+                renderClasses();
+            } else if (tab === "statistics") {
+                renderStatistics();
+            } else if (tab === "suggestions") {
+                renderSuggestions();
+            }
+        } else {
+            console.error("Tab not found:", tab + "Tab");
+        }
+    } catch (error) {
+        console.error("Error in showTab:", error);
+        alert("Error switching tabs. Please refresh the page.");
     }
-    
-    currentTab = tab;
-    if (tab === "assignments") {
-        renderAssignments();
-    } else if (tab === "calendar") {
-        renderCalendar();
-    } else if (tab === "dashboard") {
-        renderPieChart();
-        renderClasses();
-    } else if (tab === "statistics") {
-        renderStatistics();
-    } else if (tab === "suggestions") {
-        renderSuggestions();
-    }
-}
+};
 
 // ======= CLASSES =======
 function joinClass() {
