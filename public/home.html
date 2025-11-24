@@ -36,19 +36,17 @@
 
 <div id="assignmentsTab" style="display:none;">
   <h2 style="text-align: center; color: #667eea; margin-bottom: 20px;">My Assignments</h2>
-  <div class="tab-buttons">
-    <button class="tab-btn tab-selected" onclick="showAssignmentTab('active')">Active</button>
-    <button class="tab-btn" onclick="showAssignmentTab('done')">Done</button>
-    <button class="tab-btn" onclick="showAssignmentTab('missing')">Missing</button>
-  </div>
   <div id="assignmentsContainer"></div>
-  <div style="text-align: center;">
-    <button id="addAssignmentBtn" onclick="addAssignment()">Add Assignment</button>
+  <div style="text-align: center; margin-top: 20px;">
+    <button id="addAssignmentBtn" onclick="addAssignment()" style="display:none;">Add Assignment</button>
   </div>
 </div>
 
 <div id="calendarTab" style="display:none;">
   <h2 style="text-align: center; color: #667eea; margin-bottom: 20px;">Assignment Calendar</h2>
+  <p style="text-align: center; color: #666; font-size: 14px; margin-bottom: 15px; font-style: italic;">
+    Assignments are displayed in the date boxes corresponding to their due dates. Due dates are in MM/DD/YYYY format.
+  </p>
   <div id="calendarHeader">
     <button id="prevMonthBtn" onclick="prevMonth()">⬅️ Previous</button>
     <span id="monthYear"></span>
@@ -59,16 +57,12 @@
 
 <div id="statisticsTab" style="display:none;">
   <h2 style="text-align: center; color: #667eea; margin-bottom: 20px;">Statistics</h2>
-  <div style="text-align: center; padding: 40px;">
-    <p style="color: #666; font-size: 18px;">Statistics content coming soon...</p>
-  </div>
+  <div id="statisticsContainer"></div>
 </div>
 
 <div id="suggestionsTab" style="display:none;">
   <h2 style="text-align: center; color: #667eea; margin-bottom: 20px;">Suggestions</h2>
-  <div style="text-align: center; padding: 40px;">
-    <p style="color: #666; font-size: 18px;">Suggestions content coming soon...</p>
-  </div>
+  <div id="suggestionsContainer"></div>
 </div>
 
 <script src="app.js"></script>

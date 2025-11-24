@@ -532,6 +532,141 @@ button {
     margin-top: 2px;
 }
 
+.assignment-item {
+    font-size: 12px;
+    padding: 4px 8px;
+    margin: 2px 0;
+    border-radius: 4px;
+    color: white;
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.assignment-item.done {
+    background: #28a745;
+}
+
+.assignment-item.active {
+    background: #007bff;
+}
+
+.assignment-item.missing {
+    background: #dc3545;
+}
+
+/* ===== STATISTICS ===== */
+.statistics-content {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+}
+
+.class-stats-box {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 10px;
+    border-left: 4px solid #667eea;
+}
+
+.class-stats-box h3 {
+    color: #667eea;
+    margin-bottom: 20px;
+    font-size: 24px;
+}
+
+.class-stat-item {
+    background: white;
+    padding: 15px;
+    margin: 10px 0;
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+}
+
+.class-stat-item h4 {
+    margin: 0 0 10px 0;
+    color: #333;
+    font-size: 18px;
+}
+
+.class-stat-item p {
+    margin: 5px 0;
+    color: #666;
+}
+
+.assignment-stats-box {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 10px;
+    border-left: 4px solid #667eea;
+}
+
+.assignment-stats-box h3 {
+    color: #667eea;
+    margin-bottom: 20px;
+    font-size: 24px;
+}
+
+#statisticsChart {
+    max-height: 400px;
+}
+
+/* ===== SUGGESTIONS ===== */
+.suggestions-form {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.suggestions-form textarea {
+    width: 100%;
+    padding: 15px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 16px;
+    font-family: inherit;
+    box-sizing: border-box;
+    resize: vertical;
+    transition: border-color 0.3s;
+}
+
+.suggestions-form textarea:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.suggestions-list {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.suggestion-item {
+    background: #f8f9fa;
+    padding: 20px;
+    margin: 15px 0;
+    border-radius: 10px;
+    border-left: 4px solid #667eea;
+}
+
+.suggestion-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.suggestion-header strong {
+    color: #667eea;
+    font-size: 18px;
+}
+
+.suggestion-text {
+    color: #333;
+    line-height: 1.6;
+    margin: 0;
+}
+
 /* ===== RESPONSIVE ===== */
 @media (max-width: 768px) {
     .login-container h1 {

@@ -5,11 +5,13 @@ let loggedInUser = null;
 let usersDB = {student: {}, teacher: {}};
 let classesDB = {}; // classCode: {name, teacher, assignments: [{id, name, due}]}
 let studentAssignmentsDB = {}; // studentUsername_classCode_assignmentId: status
+let suggestionsDB = []; // Array of {id, studentUsername, suggestion, timestamp}
 let currentTab = "dashboard";
 let currentMonth = new Date().getMonth();
 let currentYear = new Date().getFullYear();
 let currentAssignmentTab = "active";
 let pieChart = null;
+let statisticsChart = null;
 
 // Load data from localStorage with error handling and data preservation
 function loadData() {
@@ -65,6 +67,21 @@ function loadData() {
         console.error("Error loading studentAssignmentsDB, keeping defaults:", e);
         // Keep default empty structure if loading fails
     }
+    
+    // Load suggestionsDB with error handling
+    try {
+        const savedSuggestions = localStorage.getItem("suggestionsDB");
+        if (savedSuggestions) {
+            const parsed = JSON.parse(savedSuggestions);
+            // Validate structure - should be an array
+            if (Array.isArray(parsed)) {
+                suggestionsDB = parsed;
+            }
+        }
+    } catch (e) {
+        console.error("Error loading suggestionsDB, keeping defaults:", e);
+        // Keep default empty array if loading fails
+    }
 }
 
 // Save data to localStorage (always saves to ensure data persistence)
@@ -73,6 +90,7 @@ function saveData() {
         localStorage.setItem("usersDB", JSON.stringify(usersDB));
         localStorage.setItem("classesDB", JSON.stringify(classesDB));
         localStorage.setItem("studentAssignmentsDB", JSON.stringify(studentAssignmentsDB));
+        localStorage.setItem("suggestionsDB", JSON.stringify(suggestionsDB));
     } catch (e) {
         console.error("Error saving data to localStorage:", e);
         // If storage is full or there's an error, try to clear old data or notify user
@@ -162,10 +180,22 @@ window.onload = function() {
                 document.getElementById("addAssignmentBtn").style.display = "block";
                 document.getElementById("createClassBtn").style.display = "block";
                 document.getElementById("joinClassBtn").style.display = "none";
+                // Show Statistics tab for teachers
+                const sidebar = document.getElementById("sidebar");
+                if (sidebar) {
+                    const statsBtn = sidebar.querySelector('button[onclick*="statistics"]');
+                    if (statsBtn) statsBtn.style.display = "block";
+                }
             } else {
                 document.getElementById("addAssignmentBtn").style.display = "none";
                 document.getElementById("createClassBtn").style.display = "none";
                 document.getElementById("joinClassBtn").style.display = "block";
+                // Hide Statistics tab for students
+                const sidebar = document.getElementById("sidebar");
+                if (sidebar) {
+                    const statsBtn = sidebar.querySelector('button[onclick*="statistics"]');
+                    if (statsBtn) statsBtn.style.display = "none";
+                }
             }
             renderPieChart();
             renderClasses();
@@ -182,10 +212,19 @@ function toggleSidebar() {
 }
 
 function showTab(tab) {
+    // Close sidebar on mobile after clicking
+    document.getElementById("sidebar").classList.remove("show");
+    
     ["dashboardTab", "assignmentsTab", "calendarTab", "statisticsTab", "suggestionsTab"].forEach(t => {
-        document.getElementById(t).style.display = "none";
+        const element = document.getElementById(t);
+        if (element) element.style.display = "none";
     });
-    document.getElementById(tab + "Tab").style.display = "block";
+    
+    const targetTab = document.getElementById(tab + "Tab");
+    if (targetTab) {
+        targetTab.style.display = "block";
+    }
+    
     currentTab = tab;
     if (tab === "assignments") {
         renderAssignments();
@@ -194,6 +233,10 @@ function showTab(tab) {
     } else if (tab === "dashboard") {
         renderPieChart();
         renderClasses();
+    } else if (tab === "statistics") {
+        renderStatistics();
+    } else if (tab === "suggestions") {
+        renderSuggestions();
     }
 }
 
@@ -272,14 +315,32 @@ function renderClasses() {
 function showAssignmentTab(tab) {
     currentAssignmentTab = tab;
     document.querySelectorAll(".tab-btn").forEach(btn => btn.classList.remove("tab-selected"));
-    event.target.classList.add("tab-selected");
+    if (event && event.target) {
+        event.target.classList.add("tab-selected");
+    }
     renderAssignments();
 }
 
 function renderAssignments() {
     const container = document.getElementById("assignmentsContainer");
     if (!container) return;
-    container.innerHTML = "";
+    
+    // For students, show tab buttons
+    if (userType === "student") {
+        container.innerHTML = `
+            <div class="tab-buttons">
+                <button class="tab-btn ${currentAssignmentTab === 'active' ? 'tab-selected' : ''}" onclick="showAssignmentTab('active')">Active</button>
+                <button class="tab-btn ${currentAssignmentTab === 'done' ? 'tab-selected' : ''}" onclick="showAssignmentTab('done')">Done</button>
+                <button class="tab-btn ${currentAssignmentTab === 'missing' ? 'tab-selected' : ''}" onclick="showAssignmentTab('missing')">Missing</button>
+            </div>
+        `;
+    } else {
+        container.innerHTML = "";
+    }
+    
+    const assignmentsList = document.createElement("div");
+    assignmentsList.id = "assignmentsList";
+    container.appendChild(assignmentsList);
     
     const userClasses = usersDB[userType][loggedInUser].classes || [];
     let allAssignments = [];
@@ -304,11 +365,20 @@ function renderAssignments() {
                         saveData();
                     }
                 } else {
-                    // Teachers see all assignments as active (they manage them)
+                    // Teachers see all assignments (they manage them)
                     status = "active";
                 }
                 
-                if (status === currentAssignmentTab) {
+                // For students, filter by status; for teachers, show all
+                if (userType === "student" && status === currentAssignmentTab) {
+                    allAssignments.push({
+                        ...assignment,
+                        classCode: code,
+                        className: classesDB[code].name,
+                        status: status
+                    });
+                } else if (userType === "teacher") {
+                    // Teachers see all assignments
                     allAssignments.push({
                         ...assignment,
                         classCode: code,
@@ -320,8 +390,11 @@ function renderAssignments() {
         }
     });
     
+    const listContainer = document.getElementById("assignmentsList");
+    if (!listContainer) return;
+    
     if (allAssignments.length === 0) {
-        container.innerHTML = `<p>No ${currentAssignmentTab} assignments.</p>`;
+        listContainer.innerHTML = `<p style="text-align: center; color: #666; padding: 20px;">No ${userType === "student" ? currentAssignmentTab : ""} assignments${userType === "teacher" ? " yet. Create a class and add assignments!" : "."}</p>`;
         return;
     }
     
@@ -331,7 +404,7 @@ function renderAssignments() {
         const assignmentDiv = document.createElement("div");
         assignmentDiv.className = "assignment-card";
         const dueDate = new Date(assignment.due);
-        const formattedDate = dueDate.toLocaleDateString("en-US", {year: "numeric", month: "short", day: "numeric"});
+        const formattedDate = `${String(dueDate.getMonth() + 1).padStart(2, '0')}/${String(dueDate.getDate()).padStart(2, '0')}/${dueDate.getFullYear()}`;
         assignmentDiv.innerHTML = `
             <div class="assignment-header">
                 <h4>${assignment.name}</h4>
@@ -342,7 +415,7 @@ function renderAssignments() {
             <p><strong>Due:</strong> ${formattedDate}</p>
             ${userType === "student" && assignment.status !== "done" ? `<button onclick="updateAssignmentStatus('${assignment.classCode}', '${assignment.id}', 'done')" class="status-btn">Mark as Done</button>` : ""}
         `;
-        container.appendChild(assignmentDiv);
+        listContainer.appendChild(assignmentDiv);
     });
 }
 
@@ -370,12 +443,12 @@ function addAssignment() {
     let name = prompt("Assignment name:").trim();
     if (!name) return;
     
-    let dueStr = prompt("Due date (YYYY-MM-DD or MM/DD/YYYY):").trim();
+    let dueStr = prompt("Due date (MM/DD/YYYY format, e.g., 12/25/2024):").trim();
     if (!dueStr) return;
     
     let dueDate = parseDate(dueStr);
     if (!dueDate || isNaN(dueDate.getTime())) {
-        showError("Invalid date format. Please use YYYY-MM-DD or MM/DD/YYYY");
+        showError("Invalid date format. Please use MM/DD/YYYY format (e.g., 12/25/2024)");
         return;
     }
     
@@ -417,12 +490,15 @@ function editAssignment(classCode, assignmentId) {
     let name = prompt("Assignment name:", assignment.name).trim();
     if (!name) return;
     
-    let dueStr = prompt("Due date (YYYY-MM-DD or MM/DD/YYYY):", new Date(assignment.due).toISOString().split("T")[0]).trim();
+    // Convert existing date to MM/DD/YYYY format for prompt
+    const existingDate = new Date(assignment.due);
+    const formattedExisting = `${String(existingDate.getMonth() + 1).padStart(2, '0')}/${String(existingDate.getDate()).padStart(2, '0')}/${existingDate.getFullYear()}`;
+    let dueStr = prompt("Due date (MM/DD/YYYY format, e.g., 12/25/2024):", formattedExisting).trim();
     if (!dueStr) return;
     
     let dueDate = parseDate(dueStr);
     if (!dueDate || isNaN(dueDate.getTime())) {
-        showError("Invalid date format. Please use YYYY-MM-DD or MM/DD/YYYY");
+        showError("Invalid date format. Please use MM/DD/YYYY format (e.g., 12/25/2024)");
         return;
     }
     
@@ -475,18 +551,38 @@ function updateAssignmentStatus(classCode, assignmentId, status) {
 }
 
 function parseDate(dateStr) {
-    // Try YYYY-MM-DD format
-    if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
-        return new Date(dateStr + "T00:00:00");
-    }
-    // Try MM/DD/YYYY format
+    // Only accept MM/DD/YYYY format
     if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) {
         const parts = dateStr.split("/");
-        return new Date(parts[2], parts[0] - 1, parts[1]);
+        const month = parseInt(parts[0], 10);
+        const day = parseInt(parts[1], 10);
+        const year = parseInt(parts[2], 10);
+        
+        // Validate month (1-12)
+        if (month < 1 || month > 12) {
+            return null;
+        }
+        
+        // Validate day (1-31, basic check)
+        if (day < 1 || day > 31) {
+            return null;
+        }
+        
+        // Validate year (reasonable range)
+        if (year < 2000 || year > 2100) {
+            return null;
+        }
+        
+        const date = new Date(year, month - 1, day);
+        // Check if date is valid (handles invalid dates like 02/30/2024)
+        if (date.getMonth() !== month - 1 || date.getDate() !== day || date.getFullYear() !== year) {
+            return null;
+        }
+        
+        return date;
     }
-    // Try other common formats
-    const parsed = new Date(dateStr);
-    return isNaN(parsed.getTime()) ? null : parsed;
+    // If format doesn't match MM/DD/YYYY, return null
+    return null;
 }
 
 // ======= PIE CHART =======
@@ -691,16 +787,20 @@ function renderCalendar() {
         if (assignmentsByDate[checkKey] && assignmentsByDate[checkKey].length > 0) {
             const assignmentsDiv = document.createElement("div");
             assignmentsDiv.className = "day-assignments";
-            assignmentsByDate[checkKey].slice(0, 3).forEach(assignment => {
-                const assignmentDiv = document.createElement("div");
-                assignmentDiv.className = `assignment-dot ${assignment.status}`;
-                assignmentDiv.title = `${assignment.name} - ${assignment.className}`;
-                assignmentsDiv.appendChild(assignmentDiv);
+            assignmentsByDate[checkKey].forEach((assignment, idx) => {
+                if (idx < 2) {
+                    // Show first 2 assignments with names
+                    const assignmentItem = document.createElement("div");
+                    assignmentItem.className = `assignment-item ${assignment.status}`;
+                    assignmentItem.textContent = assignment.name;
+                    assignmentItem.title = `${assignment.name} - ${assignment.className}`;
+                    assignmentsDiv.appendChild(assignmentItem);
+                }
             });
-            if (assignmentsByDate[checkKey].length > 3) {
+            if (assignmentsByDate[checkKey].length > 2) {
                 const moreDiv = document.createElement("div");
                 moreDiv.className = "assignment-more";
-                moreDiv.textContent = `+${assignmentsByDate[checkKey].length - 3}`;
+                moreDiv.textContent = `+${assignmentsByDate[checkKey].length - 2} more`;
                 assignmentsDiv.appendChild(moreDiv);
             }
             dayDiv.appendChild(assignmentsDiv);
@@ -708,4 +808,191 @@ function renderCalendar() {
         
         container.appendChild(dayDiv);
     }
+}
+
+// ======= STATISTICS (Teachers Only) =======
+function renderStatistics() {
+    if (userType !== "teacher") return;
+    
+    const container = document.getElementById("statisticsContainer");
+    if (!container) return;
+    
+    const userClasses = usersDB[userType][loggedInUser].classes || [];
+    let html = '<div class="statistics-content">';
+    
+    // Class participation stats
+    html += '<div class="class-stats-box">';
+    html += '<h3>Class Participation</h3>';
+    
+    if (userClasses.length === 0) {
+        html += '<p>No classes created yet.</p>';
+    } else {
+        userClasses.forEach(code => {
+            if (classesDB[code]) {
+                // Count students in this class
+                let studentCount = 0;
+                Object.keys(usersDB.student).forEach(studentUsername => {
+                    if (usersDB.student[studentUsername].classes && 
+                        usersDB.student[studentUsername].classes.includes(code)) {
+                        studentCount++;
+                    }
+                });
+                
+                html += `<div class="class-stat-item">`;
+                html += `<h4>${classesDB[code].name}</h4>`;
+                html += `<p><strong>Students:</strong> ${studentCount}</p>`;
+                html += `<p><strong>Code:</strong> ${code}</p>`;
+                html += `</div>`;
+            }
+        });
+    }
+    html += '</div>';
+    
+    // Assignment status bar chart
+    html += '<div class="assignment-stats-box">';
+    html += '<h3>Assignment Status Overview</h3>';
+    html += '<canvas id="statisticsChart"></canvas>';
+    html += '</div>';
+    
+    html += '</div>';
+    container.innerHTML = html;
+    
+    // Render bar chart
+    const canvas = document.getElementById("statisticsChart");
+    if (canvas) {
+        let done = 0, active = 0, missing = 0;
+        
+        userClasses.forEach(code => {
+            if (classesDB[code]) {
+                classesDB[code].assignments.forEach(assignment => {
+                    // Count statuses across all students
+                    Object.keys(usersDB.student).forEach(studentUsername => {
+                        if (usersDB.student[studentUsername].classes && 
+                            usersDB.student[studentUsername].classes.includes(code)) {
+                            const statusKey = `${studentUsername}_${code}_${assignment.id}`;
+                            const status = studentAssignmentsDB[statusKey] || "active";
+                            
+                            const dueDate = new Date(assignment.due);
+                            const now = new Date();
+                            now.setHours(0, 0, 0, 0);
+                            dueDate.setHours(0, 0, 0, 0);
+                            
+                            let finalStatus = status;
+                            if (status === "active" && dueDate < now) {
+                                finalStatus = "missing";
+                            }
+                            
+                            if (finalStatus === "done") done++;
+                            else if (finalStatus === "active") active++;
+                            else if (finalStatus === "missing") missing++;
+                        }
+                    });
+                });
+            }
+        });
+        
+        if (statisticsChart) {
+            statisticsChart.destroy();
+        }
+        
+        statisticsChart = new Chart(canvas, {
+            type: "bar",
+            data: {
+                labels: ["Done", "Active", "Missing"],
+                datasets: [{
+                    label: "Number of Assignments",
+                    data: [done, active, missing],
+                    backgroundColor: ["#28a745", "#007bff", "#dc3545"]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        });
+    }
+}
+
+// ======= SUGGESTIONS =======
+function renderSuggestions() {
+    const container = document.getElementById("suggestionsContainer");
+    if (!container) return;
+    
+    if (userType === "student") {
+        // Student view: submission form
+        container.innerHTML = `
+            <div class="suggestions-form">
+                <p style="text-align: center; color: #666; font-size: 18px; margin-bottom: 20px;">
+                    Leave a suggestion below for our school application, we will try our best to take your ideas into consideration!
+                </p>
+                <textarea id="suggestionText" placeholder="Enter your suggestion here..." rows="6" style="width: 100%; padding: 15px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 16px; font-family: inherit; box-sizing: border-box; resize: vertical;"></textarea>
+                <div style="text-align: center; margin-top: 20px;">
+                    <button onclick="submitSuggestion()" style="background: #667eea; color: white; padding: 15px 40px; font-size: 18px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600;">
+                        Submit
+                    </button>
+                </div>
+            </div>
+        `;
+    } else {
+        // Teacher view: list of suggestions
+        container.innerHTML = '<div class="suggestions-list">';
+        
+        if (suggestionsDB.length === 0) {
+            container.innerHTML += '<p style="text-align: center; color: #666; font-size: 18px; padding: 40px;">No suggestions submitted yet.</p>';
+        } else {
+            suggestionsDB.forEach((suggestion, index) => {
+                const date = new Date(suggestion.timestamp);
+                const formattedDate = date.toLocaleDateString("en-US", {year: "numeric", month: "short", day: "numeric"});
+                container.innerHTML += `
+                    <div class="suggestion-item">
+                        <div class="suggestion-header">
+                            <strong>${suggestion.studentUsername}</strong>
+                            <span style="color: #666; font-size: 14px;">${formattedDate}</span>
+                        </div>
+                        <p class="suggestion-text">${suggestion.suggestion}</p>
+                    </div>
+                `;
+            });
+        }
+        
+        container.innerHTML += '</div>';
+    }
+}
+
+function submitSuggestion() {
+    if (userType !== "student") return;
+    
+    const textarea = document.getElementById("suggestionText");
+    if (!textarea) return;
+    
+    const suggestionText = textarea.value.trim();
+    if (!suggestionText) {
+        showError("Please enter a suggestion before submitting.");
+        return;
+    }
+    
+    const suggestion = {
+        id: Date.now().toString(),
+        studentUsername: loggedInUser,
+        suggestion: suggestionText,
+        timestamp: new Date().toISOString()
+    };
+    
+    suggestionsDB.push(suggestion);
+    saveData();
+    showSuccess("Thank you for your suggestion!");
+    textarea.value = "";
 }
