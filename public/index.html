@@ -13,13 +13,14 @@
   <div class="account-choice">
     <button onclick="selectType('student')">Student 📚</button>
     <button onclick="selectType('teacher')">Teacher ✏️</button>
+    <button onclick="selectType('admin')">Admin 👨‍💼</button>
   </div>
 
   <div id="loginForm" style="display:none;">
     <input type="text" id="username" placeholder="Username" autocomplete="username">
     <input type="password" id="password" placeholder="Password" autocomplete="current-password">
     <button onclick="login()">Login</button>
-    <button onclick="createAccount()">Create Account</button>
+    <button id="createAccountBtn" onclick="createAccount()">Create Account</button>
   </div>
 </div>
 

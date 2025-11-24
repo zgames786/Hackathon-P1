@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TNHA School App - Admin Dashboard</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- Firebase SDK -->
+<script type="module">
+  import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+  
+  // Initialize Firestore - using existing Firebase app if available
+  // Note: firebaseApp should be initialized elsewhere with firebaseConfig
+  // This code assumes firebaseApp is already initialized
+  if (typeof window.firebaseApp !== 'undefined' && window.firebaseApp) {
+    window.db = getFirestore(window.firebaseApp);
+  } else {
+    // Try to get db if it's already set
+    if (typeof window.db === 'undefined') {
+      console.warn("Firebase not initialized. Please ensure Firebase is initialized with firebaseConfig before loading this page.");
+    }
+  }
+  
+  // Make Firestore functions available globally
+  window.getFirestoreDocs = async (collectionName) => {
+    if (!window.db) {
+      console.error("Firestore not initialized");
+      return [];
+    }
+    try {
+      const querySnapshot = await getDocs(collection(window.db, collectionName));
+      const docs = [];
+      querySnapshot.forEach((doc) => {
+        docs.push({ id: doc.id, ...doc.data() });
+      });
+      return docs;
+    } catch (error) {
+      console.error("Error reading from Firestore:", error);
+      return [];
+    }
+  };
+</script>
+</head>
+<body>
+
+<div id="hamburger" onclick="toggleSidebar()">☰</div>
+
+<div id="sidebar">
+  <button onclick="showTab('dashboard')">🏠 Dashboard</button>
+  <button onclick="showTab('communication')">💬 Communication</button>
+  <button onclick="showTab('fees')">💰 Fees</button>
+  <button onclick="showTab('expenses')">📊 Expenses</button>
+  <button onclick="showTab('transport')">🚌 Transport</button>
+  <button onclick="showTab('reports')">📈 Reports</button>
+  <button onclick="showTab('attendance')">✅ Attendance</button>
+  <button onclick="showTab('admin')">👨‍💼 Admin</button>
+  <button onclick="showTab('help')">❓ Help</button>
+  <button onclick="logout()">🚪 Logout</button>
+</div>
+
+<div class="header-title">TNHA School App - Admin</div>
+<div class="header-subtitle">Welcome, <span id="userNameDisplay"></span>!</div>
+
+<div id="dashboardTab">
+  <h2 style="text-align: center; color: #667eea; margin-bottom: 20px;">Admin Dashboard</h2>
+  <div id="adminDashboardContent">
+    <div class="admin-stats-container">
+      <div class="admin-stat-box">
+        <h3>Total Students</h3>
+        <div id="totalStudents" class="stat-number">0</div>
+      </div>
+      <div class="admin-stat-box">
+        <h3>Total Teachers</h3>
+        <div id="totalTeachers" class="stat-number">0</div>
+      </div>
+    </div>
+    <div class="admin-classes-box">
+      <h3>Classes Overview</h3>
+      <div id="classesList"></div>
+    </div>
+  </div>
+</div>
+
+<div id="communicationTab" style="display:none;">
+  <h2 style="text-align: center; color: #667eea; margin-bottom: 20px;">Communication</h2>
+  <div style="text-align: center; padding: 40px;">
+    <p style="color: #666; font-size: 18px;">Communication features coming soon...</p>
+  </div>
+</div>
+
+<div id="feesTab" style="display:none;">
+  <h2 style="text-align: center; color: #667eea; margin-bottom: 20px;">Fees</h2>
+  <div style="text-align: center; padding: 40px;">
+    <p style="color: #666; font-size: 18px;">Fees management coming soon...</p>
+  </div>
+</div>
+
+<div id="expensesTab" style="display:none;">
+  <h2 style="text-align: center; color: #667eea; margin-bottom: 20px;">Expenses</h2>
+  <div style="text-align: center; padding: 40px;">
+    <p style="color: #666; font-size: 18px;">Expenses tracking coming soon...</p>
+  </div>
+</div>
+
+<div id="transportTab" style="display:none;">
+  <h2 style="text-align: center; color: #667eea; margin-bottom: 20px;">Transport</h2>
+  <div style="text-align: center; padding: 40px;">
+    <p style="color: #666; font-size: 18px;">Transport management coming soon...</p>
+  </div>
+</div>
+
+<div id="reportsTab" style="display:none;">
+  <h2 style="text-align: center; color: #667eea; margin-bottom: 20px;">Reports</h2>
+  <div style="text-align: center; padding: 40px;">
+    <p style="color: #666; font-size: 18px;">Reports coming soon...</p>
+  </div>
+</div>
+
+<div id="attendanceTab" style="display:none;">
+  <h2 style="text-align: center; color: #667eea; margin-bottom: 20px;">Attendance</h2>
+  <div style="text-align: center; padding: 40px;">
+    <p style="color: #666; font-size: 18px;">Attendance tracking coming soon...</p>
+  </div>
+</div>
+
+<div id="adminTab" style="display:none;">
+  <h2 style="text-align: center; color: #667eea; margin-bottom: 20px;">Admin Settings</h2>
+  <div style="text-align: center; padding: 40px;">
+    <p style="color: #666; font-size: 18px;">Admin settings coming soon...</p>
+  </div>
+</div>
+
+<div id="helpTab" style="display:none;">
+  <h2 style="text-align: center; color: #667eea; margin-bottom: 20px;">Help</h2>
+  <div style="text-align: center; padding: 40px;">
+    <p style="color: #666; font-size: 18px;">Help and support coming soon...</p>
+  </div>
+</div>
+
+<script src="app.js"></script>
+<script src="admin.js"></script>
+</body>
+</html>
+

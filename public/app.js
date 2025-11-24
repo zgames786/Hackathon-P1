@@ -1,8 +1,9 @@
 // ======= DATA STORAGE =======
 let userType = "";
 let loggedInUser = null;
+let adminUIDs = []; // Array of admin UIDs - should be set from Firestore or config
 // Initialize with empty structure - will be loaded from localStorage
-let usersDB = {student: {}, teacher: {}};
+let usersDB = {student: {}, teacher: {}, admin: {}};
 let classesDB = {}; // classCode: {name, teacher, assignments: [{id, name, due}]}
 let studentAssignmentsDB = {}; // studentUsername_classCode_assignmentId: status
 let suggestionsDB = []; // Array of {id, studentUsername, suggestion, timestamp}
@@ -101,6 +102,30 @@ function saveData() {
 // Initialize
 loadData();
 
+// Load admin UIDs (can be from Firestore or hardcoded)
+async function loadAdminUIDs() {
+    // Try to load from Firestore if available
+    // Create an "admins" collection in Firestore with documents like: {uid: "admin-uid-here"}
+    if (window.db && window.getFirestoreDocs) {
+        try {
+            const admins = await window.getFirestoreDocs("admins");
+            adminUIDs = admins.map(admin => admin.uid || admin.id);
+            if (adminUIDs.length > 0) {
+                return;
+            }
+        } catch (error) {
+            console.log("Could not load admins from Firestore, using default list");
+        }
+    }
+    // Default admin UIDs - add UIDs here for hardcoded admin access
+    // Format: adminUIDs = ["admin-uid-1", "admin-uid-2", ...];
+    // OR create an "admins" collection in Firestore with documents containing {uid: "admin-uid"}
+    if (adminUIDs.length === 0) {
+        // Add your admin UIDs here, or set up Firestore "admins" collection
+        adminUIDs = [];
+    }
+}
+
 // ======= LOGIN & ACCOUNT =======
 function selectType(type) {
     userType = type;
@@ -108,6 +133,16 @@ function selectType(type) {
     document.querySelectorAll(".account-choice button").forEach(btn => {
         btn.style.opacity = btn.textContent.toLowerCase().includes(type) ? "1" : "0.5";
     });
+    // Hide create account button for admin
+    const createBtn = document.getElementById("createAccountBtn");
+    if (createBtn) {
+        createBtn.style.display = (type === "admin") ? "none" : "block";
+    }
+    // Change placeholder for admin
+    const usernameInput = document.getElementById("username");
+    if (usernameInput) {
+        usernameInput.placeholder = (type === "admin") ? "Admin UID" : "Username";
+    }
 }
 
 function createAccount() {
@@ -143,6 +178,36 @@ function login() {
         showError("Please enter both username and password");
         return;
     }
+    
+    // Admin login - check by UID
+    if (userType === "admin") {
+        // Load admin UIDs and check
+        loadAdminUIDs().then(() => {
+            if (adminUIDs.includes(u)) {
+                loggedInUser = u;
+                localStorage.setItem("loggedInUser", userType + "_" + u);
+                localStorage.setItem("userType", userType);
+                localStorage.setItem("adminUID", u);
+                window.location.href = "admin.html";
+            } else {
+                showError("Invalid admin UID. Access denied.");
+            }
+        }).catch(() => {
+            // If Firestore not available, check hardcoded list
+            if (adminUIDs.includes(u)) {
+                loggedInUser = u;
+                localStorage.setItem("loggedInUser", userType + "_" + u);
+                localStorage.setItem("userType", userType);
+                localStorage.setItem("adminUID", u);
+                window.location.href = "admin.html";
+            } else {
+                showError("Invalid admin UID. Access denied.");
+            }
+        });
+        return;
+    }
+    
+    // Regular student/teacher login
     if (usersDB[userType][u] && usersDB[userType][u].password === p) {
         loggedInUser = u;
         localStorage.setItem("loggedInUser", userType + "_" + u);
@@ -156,6 +221,7 @@ function login() {
 function logout() {
     localStorage.removeItem("loggedInUser");
     localStorage.removeItem("userType");
+    localStorage.removeItem("adminUID");
     window.location.href = "index.html";
 }
 
@@ -169,6 +235,25 @@ function showSuccess(message) {
 
 // ======= DASHBOARD =======
 window.onload = function() {
+    // Protect admin pages - redirect non-admins
+    if (window.location.pathname.includes("admin.html")) {
+        const userType = localStorage.getItem("userType");
+        const adminUID = localStorage.getItem("adminUID");
+        if (userType !== "admin" || !adminUID) {
+            window.location.href = "index.html";
+            return;
+        }
+    }
+    
+    // Redirect admins away from regular pages
+    if (window.location.pathname.includes("home.html")) {
+        const userType = localStorage.getItem("userType");
+        if (userType === "admin") {
+            window.location.href = "admin.html";
+            return;
+        }
+    }
+    
     if (window.location.pathname.includes("home.html")) {
         if (localStorage.getItem("loggedInUser")) {
             const userInfo = localStorage.getItem("loggedInUser").split("_");
