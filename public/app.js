@@ -1,6 +1,7 @@
 // ======= DATA STORAGE =======
 let userType = "";
 let loggedInUser = null;
+// Initialize with empty structure - will be loaded from localStorage
 let usersDB = {student: {}, teacher: {}};
 let classesDB = {}; // classCode: {name, teacher, assignments: [{id, name, due}]}
 let studentAssignmentsDB = {}; // studentUsername_classCode_assignmentId: status
@@ -10,21 +11,73 @@ let currentYear = new Date().getFullYear();
 let currentAssignmentTab = "active";
 let pieChart = null;
 
-// Load data from localStorage
+// Load data from localStorage with error handling and data preservation
 function loadData() {
-    const savedUsers = localStorage.getItem("usersDB");
-    const savedClasses = localStorage.getItem("classesDB");
-    const savedStudentAssignments = localStorage.getItem("studentAssignmentsDB");
-    if (savedUsers) usersDB = JSON.parse(savedUsers);
-    if (savedClasses) classesDB = JSON.parse(savedClasses);
-    if (savedStudentAssignments) studentAssignmentsDB = JSON.parse(savedStudentAssignments);
+    // Load usersDB with error handling - prioritize localStorage data
+    try {
+        const savedUsers = localStorage.getItem("usersDB");
+        if (savedUsers) {
+            const parsed = JSON.parse(savedUsers);
+            // Validate structure - only use if it's a valid object with student/teacher properties
+            if (parsed && typeof parsed === 'object') {
+                // If localStorage has data, use it (prioritize saved data over defaults)
+                if (parsed.student && typeof parsed.student === 'object') {
+                    usersDB.student = {...parsed.student, ...usersDB.student}; // Saved data first, then defaults
+                }
+                if (parsed.teacher && typeof parsed.teacher === 'object') {
+                    usersDB.teacher = {...parsed.teacher, ...usersDB.teacher}; // Saved data first, then defaults
+                }
+            }
+        }
+    } catch (e) {
+        console.error("Error loading usersDB, keeping defaults:", e);
+        // Keep default empty structure if loading fails
+    }
+    
+    // Load classesDB with error handling - prioritize localStorage data
+    try {
+        const savedClasses = localStorage.getItem("classesDB");
+        if (savedClasses) {
+            const parsed = JSON.parse(savedClasses);
+            // Validate structure - only use if it's a valid object
+            if (parsed && typeof parsed === 'object') {
+                // If localStorage has data, use it (prioritize saved data over defaults)
+                classesDB = {...parsed, ...classesDB}; // Saved data first, then defaults
+            }
+        }
+    } catch (e) {
+        console.error("Error loading classesDB, keeping defaults:", e);
+        // Keep default empty structure if loading fails
+    }
+    
+    // Load studentAssignmentsDB with error handling - prioritize localStorage data
+    try {
+        const savedStudentAssignments = localStorage.getItem("studentAssignmentsDB");
+        if (savedStudentAssignments) {
+            const parsed = JSON.parse(savedStudentAssignments);
+            // Validate structure - only use if it's a valid object
+            if (parsed && typeof parsed === 'object') {
+                // If localStorage has data, use it (prioritize saved data over defaults)
+                studentAssignmentsDB = {...parsed, ...studentAssignmentsDB}; // Saved data first, then defaults
+            }
+        }
+    } catch (e) {
+        console.error("Error loading studentAssignmentsDB, keeping defaults:", e);
+        // Keep default empty structure if loading fails
+    }
 }
 
-// Save data to localStorage
+// Save data to localStorage (always saves to ensure data persistence)
 function saveData() {
-    localStorage.setItem("usersDB", JSON.stringify(usersDB));
-    localStorage.setItem("classesDB", JSON.stringify(classesDB));
-    localStorage.setItem("studentAssignmentsDB", JSON.stringify(studentAssignmentsDB));
+    try {
+        localStorage.setItem("usersDB", JSON.stringify(usersDB));
+        localStorage.setItem("classesDB", JSON.stringify(classesDB));
+        localStorage.setItem("studentAssignmentsDB", JSON.stringify(studentAssignmentsDB));
+    } catch (e) {
+        console.error("Error saving data to localStorage:", e);
+        // If storage is full or there's an error, try to clear old data or notify user
+        alert("Warning: Could not save data. Your browser storage may be full.");
+    }
 }
 
 // Initialize
