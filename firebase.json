@@ -1,10 +1,6 @@
 {
   "hosting": {
-<<<<<<< HEAD
-    "public": "./",
-=======
     "public": "public",
->>>>>>> f89402c (first commit)
     "ignore": [
       "firebase.json",
       "**/.*",
