@@ -4,7 +4,7 @@ let loggedInUser = null;
 let usersDB = {student: {}, teacher: {}};
 let classesDB = {}; // classCode: {name, teacher, assignments: [{id, name, due}]}
 let studentAssignmentsDB = {}; // studentUsername_classCode_assignmentId: status
-let currentTab = "home";
+let currentTab = "dashboard";
 let currentMonth = new Date().getMonth();
 let currentYear = new Date().getFullYear();
 let currentAssignmentTab = "active";
@@ -129,7 +129,7 @@ function toggleSidebar() {
 }
 
 function showTab(tab) {
-    ["homeTab", "assignmentsTab", "calendarTab"].forEach(t => {
+    ["dashboardTab", "assignmentsTab", "calendarTab", "statisticsTab", "suggestionsTab"].forEach(t => {
         document.getElementById(t).style.display = "none";
     });
     document.getElementById(tab + "Tab").style.display = "block";
@@ -138,7 +138,7 @@ function showTab(tab) {
         renderAssignments();
     } else if (tab === "calendar") {
         renderCalendar();
-    } else if (tab === "home") {
+    } else if (tab === "dashboard") {
         renderPieChart();
         renderClasses();
     }

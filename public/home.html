@@ -12,16 +12,18 @@
 <div id="hamburger" onclick="toggleSidebar()">☰</div>
 
 <div id="sidebar">
-  <button onclick="showTab('home')">🏠 Home</button>
+  <button onclick="showTab('dashboard')">🏠 Dashboard</button>
   <button onclick="showTab('assignments')">📝 Assignments</button>
   <button onclick="showTab('calendar')">📅 Calendar</button>
+  <button onclick="showTab('statistics')">📊 Statistics</button>
+  <button onclick="showTab('suggestions')">💡 Suggestions</button>
   <button onclick="logout()">🚪 Logout</button>
 </div>
 
 <div class="header-title">Homework Tracker</div>
 <div class="header-subtitle">Welcome, <span id="userNameDisplay"></span>!</div>
 
-<div id="homeTab">
+<div id="dashboardTab">
   <h2 style="text-align: center; color: #667eea; margin-bottom: 20px;">Assignment Overview</h2>
   <canvas id="piechart"></canvas>
   <div id="pieChartStats"></div>
@@ -53,6 +55,20 @@
     <button id="nextMonthBtn" onclick="nextMonth()">Next ➡️</button>
   </div>
   <div id="calendarContainer"></div>
+</div>
+
+<div id="statisticsTab" style="display:none;">
+  <h2 style="text-align: center; color: #667eea; margin-bottom: 20px;">Statistics</h2>
+  <div style="text-align: center; padding: 40px;">
+    <p style="color: #666; font-size: 18px;">Statistics content coming soon...</p>
+  </div>
+</div>
+
+<div id="suggestionsTab" style="display:none;">
+  <h2 style="text-align: center; color: #667eea; margin-bottom: 20px;">Suggestions</h2>
+  <div style="text-align: center; padding: 40px;">
+    <p style="color: #666; font-size: 18px;">Suggestions content coming soon...</p>
+  </div>
 </div>
 
 <script src="app.js"></script>

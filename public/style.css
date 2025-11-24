@@ -209,7 +209,7 @@ body {
 }
 
 /* ===== MAIN CONTENT ===== */
-#homeTab, #assignmentsTab, #calendarTab {
+#dashboardTab, #assignmentsTab, #calendarTab, #statisticsTab, #suggestionsTab {
     max-width: 1200px;
     margin: 0 auto;
     padding: 20px;
@@ -552,7 +552,7 @@ button {
         left: -200px;
     }
     
-    #homeTab, #assignmentsTab, #calendarTab {
+    #dashboardTab, #assignmentsTab, #calendarTab, #statisticsTab, #suggestionsTab {
         margin: 10px;
         padding: 15px;
     }
