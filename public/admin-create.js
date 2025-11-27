@@ -51,9 +51,13 @@ async function createAdmin() {
         return;
     }
     
-    // Check master UID
-    if (masterUID !== MASTER_UID) {
-        showAdminError("Invalid Master UID. Access denied.");
+    // Check master UID (case-sensitive exact match, remove any extra whitespace)
+    const cleanedUID = masterUID.replace(/\s+/g, '');
+    if (cleanedUID !== MASTER_UID) {
+        console.log("Entered UID:", cleanedUID);
+        console.log("Expected UID:", MASTER_UID);
+        console.log("Lengths - Entered:", cleanedUID.length, "Expected:", MASTER_UID.length);
+        showAdminError("Invalid Master UID. Access denied. Please check your Master UID and try again.");
         return;
     }
     
