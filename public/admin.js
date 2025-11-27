@@ -6,8 +6,8 @@ let adminData = {
     classes: []
 };
 
-// Check if user is admin
-function checkAdminAccess() {
+// Check if user is admin by verifying their UID exists in admins collection
+async function checkAdminAccess() {
     const storedUID = localStorage.getItem("adminUID");
     const storedUserType = localStorage.getItem("userType");
     
@@ -15,6 +15,26 @@ function checkAdminAccess() {
         // Not an admin, redirect to login
         window.location.href = "index.html";
         return false;
+    }
+    
+    // Verify user's UID exists in admins collection
+    try {
+        if (window.db && window.getFirestoreDocs) {
+            const admins = await window.getFirestoreDocs("admins");
+            const admin = admins.find(a => a.uid === storedUID);
+            
+            if (!admin) {
+                // User's UID not in admins collection, redirect to login
+                localStorage.removeItem("loggedInUser");
+                localStorage.removeItem("userType");
+                localStorage.removeItem("adminUID");
+                window.location.href = "index.html";
+                return false;
+            }
+        }
+    } catch (error) {
+        console.error("Error checking admin access:", error);
+        // On error, still allow access if userType is admin (graceful degradation)
     }
     
     adminUID = storedUID;
@@ -163,15 +183,18 @@ function setupAdminSidebarButtons() {
 }
 
 // Initialize admin page
-window.onload = function() {
+window.onload = async function() {
     if (window.location.pathname.includes("admin.html")) {
-        if (!checkAdminAccess()) {
+        const hasAccess = await checkAdminAccess();
+        if (!hasAccess) {
             return;
         }
         
-        // Display admin UID
+        // Display admin username or UID
+        const storedUsername = localStorage.getItem("loggedInUser");
+        const displayName = storedUsername ? storedUsername.replace("admin_", "") : adminUID;
         if (document.getElementById("userNameDisplay")) {
-            document.getElementById("userNameDisplay").innerText = adminUID;
+            document.getElementById("userNameDisplay").innerText = displayName;
         }
         
         // Setup sidebar

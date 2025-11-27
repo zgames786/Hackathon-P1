@@ -141,7 +141,7 @@ function selectType(type) {
     // Change placeholder for admin
     const usernameInput = document.getElementById("username");
     if (usernameInput) {
-        usernameInput.placeholder = (type === "admin") ? "Admin UID" : "Username";
+        usernameInput.placeholder = "Username";
     }
 }
 
@@ -171,7 +171,62 @@ function createAccount() {
     }
 }
 
+// ======= LOGIN ATTEMPT TRACKING =======
+function checkLoginBlocked() {
+    const blockData = localStorage.getItem("loginBlock");
+    if (!blockData) return false;
+    
+    try {
+        const block = JSON.parse(blockData);
+        const blockTime = block.timestamp;
+        const now = Date.now();
+        const fifteenMinutes = 15 * 60 * 1000; // 15 minutes in milliseconds
+        
+        if (now - blockTime < fifteenMinutes) {
+            const remainingMinutes = Math.ceil((fifteenMinutes - (now - blockTime)) / 60000);
+            showError(`Login blocked. Too many failed attempts. Please try again in ${remainingMinutes} minute(s).`);
+            return true;
+        } else {
+            // Block expired, clear it
+            localStorage.removeItem("loginBlock");
+            localStorage.removeItem("loginAttempts");
+            return false;
+        }
+    } catch (e) {
+        localStorage.removeItem("loginBlock");
+        localStorage.removeItem("loginAttempts");
+        return false;
+    }
+}
+
+function recordFailedAttempt() {
+    let attempts = parseInt(localStorage.getItem("loginAttempts") || "0");
+    attempts++;
+    localStorage.setItem("loginAttempts", attempts.toString());
+    
+    if (attempts >= 3) {
+        // Block for 15 minutes
+        const blockData = {
+            timestamp: Date.now()
+        };
+        localStorage.setItem("loginBlock", JSON.stringify(blockData));
+        showError("Too many failed login attempts. Login blocked for 15 minutes.");
+    } else {
+        showError(`Invalid credentials. ${3 - attempts} attempt(s) remaining.`);
+    }
+}
+
+function clearLoginAttempts() {
+    localStorage.removeItem("loginAttempts");
+    localStorage.removeItem("loginBlock");
+}
+
 function login() {
+    // Check if login is blocked
+    if (checkLoginBlocked()) {
+        return;
+    }
+    
     let u = document.getElementById("username").value.trim();
     let p = document.getElementById("password").value;
     if (!u || !p) {
@@ -179,42 +234,89 @@ function login() {
         return;
     }
     
-    // Admin login - check by UID
+    // Admin login - use Firebase Auth
     if (userType === "admin") {
-        // Load admin UIDs and check
-        loadAdminUIDs().then(() => {
-            if (adminUIDs.includes(u)) {
+        // Check if user exists in admins collection and authenticate with Firebase Auth
+        checkAdminAccess(u, p).then((isValid) => {
+            if (isValid) {
+                clearLoginAttempts();
                 loggedInUser = u;
                 localStorage.setItem("loggedInUser", userType + "_" + u);
                 localStorage.setItem("userType", userType);
-                localStorage.setItem("adminUID", u);
+                // adminUID is set in checkAdminAccess function
                 window.location.href = "admin.html";
             } else {
-                showError("Invalid admin UID. Access denied.");
+                recordFailedAttempt();
             }
-        }).catch(() => {
-            // If Firestore not available, check hardcoded list
-            if (adminUIDs.includes(u)) {
-                loggedInUser = u;
-                localStorage.setItem("loggedInUser", userType + "_" + u);
-                localStorage.setItem("userType", userType);
-                localStorage.setItem("adminUID", u);
-                window.location.href = "admin.html";
-            } else {
-                showError("Invalid admin UID. Access denied.");
-            }
+        }).catch((error) => {
+            console.error("Admin login error:", error);
+            recordFailedAttempt();
         });
         return;
     }
     
     // Regular student/teacher login
     if (usersDB[userType][u] && usersDB[userType][u].password === p) {
+        clearLoginAttempts();
         loggedInUser = u;
         localStorage.setItem("loggedInUser", userType + "_" + u);
         localStorage.setItem("userType", userType);
         window.location.href = "home.html";
     } else {
-        showError("Invalid username or password");
+        recordFailedAttempt();
+    }
+}
+
+// Check admin access using Firebase Auth and admins collection
+async function checkAdminAccess(username, password) {
+    try {
+        // Create fake email: username@admins.local
+        const fakeEmail = `${username}@admins.local`;
+        
+        // First, try to sign in with Firebase Auth
+        if (window.getFirebaseAuth && window.signInWithEmailAndPassword) {
+            try {
+                const userCredential = await window.signInWithEmailAndPassword(window.getFirebaseAuth(), fakeEmail, password);
+                const user = userCredential.user;
+                
+                // After successful auth, verify user's UID exists in admins collection
+                if (window.db && window.getFirestoreDocs) {
+                    const admins = await window.getFirestoreDocs("admins");
+                    const admin = admins.find(a => a.uid === user.uid);
+                    
+                    if (!admin) {
+                        // User authenticated but UID not in admins collection
+                        return false;
+                    }
+                    
+                    // Store the UID from Firebase Auth
+                    localStorage.setItem("adminUID", user.uid);
+                    return true;
+                }
+                
+                // If Firestore not available but auth succeeded, allow access
+                localStorage.setItem("adminUID", user.uid);
+                return true;
+            } catch (authError) {
+                // Auth failed
+                return false;
+            }
+        }
+        
+        // If Firebase Auth not available, check admins collection only
+        if (window.db && window.getFirestoreDocs) {
+            const admins = await window.getFirestoreDocs("admins");
+            const admin = admins.find(a => a.username === username);
+            if (admin) {
+                localStorage.setItem("adminUID", admin.uid || admin.id);
+                return true;
+            }
+        }
+        
+        return false;
+    } catch (error) {
+        console.error("Error checking admin access:", error);
+        return false;
     }
 }
 
