@@ -33,15 +33,14 @@ function showAdminSuccess(message) {
 async function createAdmin() {
     const username = document.getElementById("adminUsername").value.trim();
     const password = document.getElementById("adminPassword").value;
-    const masterUID = document.getElementById("masterUID").value.trim();
     
     // Hide previous messages
     showAdminError("");
     showAdminSuccess("");
     
-    // Validation
-    if (!username || !password || !masterUID) {
-        showAdminError("Please fill in all fields.");
+    // Validation (master UID temporarily disabled)
+    if (!username || !password) {
+        showAdminError("Please fill in username and password.");
         return;
     }
     
@@ -55,39 +54,7 @@ async function createAdmin() {
         return;
     }
     
-    // Check master UID (case-sensitive exact match, remove any extra whitespace)
-    const cleanedUID = masterUID.replace(/\s+/g, '').trim();
-    
-    // Verify MASTER_UID constant is accessible
-    if (typeof MASTER_UID === 'undefined') {
-        console.error("MASTER_UID constant is not defined!");
-        showAdminError("System error: Master UID configuration missing.");
-        return;
-    }
-    
-    const expectedUID = String(MASTER_UID).trim();
-    
-    // Debug logging
-    console.log("=== Master UID Check ===");
-    console.log("Entered (raw):", JSON.stringify(masterUID));
-    console.log("Entered (cleaned):", JSON.stringify(cleanedUID));
-    console.log("Expected:", JSON.stringify(expectedUID));
-    console.log("Match:", cleanedUID === expectedUID);
-    console.log("Entered length:", cleanedUID.length);
-    console.log("Expected length:", expectedUID.length);
-    console.log("Character by character check:");
-    for (let i = 0; i < Math.max(cleanedUID.length, expectedUID.length); i++) {
-        if (cleanedUID[i] !== expectedUID[i]) {
-            console.log(`Mismatch at position ${i}: entered="${cleanedUID[i]}" (code ${cleanedUID.charCodeAt(i)}), expected="${expectedUID[i]}" (code ${expectedUID.charCodeAt(i)})`);
-        }
-    }
-    
-    if (cleanedUID !== expectedUID) {
-        showAdminError(`Invalid Master UID. Access denied. Please check your Master UID and try again.`);
-        return;
-    }
-    
-    console.log("Master UID validated successfully!");
+    // Master UID check temporarily disabled - can create admin with just username and password
     
     // Create fake email from username (Firebase Auth requires email)
     // Format: username@admins.local (e.g., "principal" becomes "principal@admins.local")
@@ -115,7 +82,6 @@ async function createAdmin() {
         // Clear form
         document.getElementById("adminUsername").value = "";
         document.getElementById("adminPassword").value = "";
-        document.getElementById("masterUID").value = "";
         
         // Redirect to login after 2 seconds
         setTimeout(() => {

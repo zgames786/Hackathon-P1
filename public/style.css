@@ -108,6 +108,12 @@ body {
     min-width: 120px;
 }
 
+/* Center buttons in login form */
+#loginForm > div {
+    text-align: center;
+    margin-top: 20px;
+}
+
 #loginForm button:hover {
     background: #5568d3;
     transform: translateY(-2px);

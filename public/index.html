@@ -65,9 +65,11 @@
     <input type="text" id="username" placeholder="Username" autocomplete="username">
     <input type="password" id="password" placeholder="Password" autocomplete="current-password">
     <input type="text" id="masterUID" placeholder="Master UID (Admin only)" autocomplete="off" style="display:none;">
-    <button onclick="login()">Login</button>
-    <button id="createAccountBtn" onclick="createAccount()">Create Account</button>
-    <div style="text-align: center; margin-top: 15px;">
+    <div style="text-align: center;">
+      <button onclick="login()">Login</button>
+      <button id="createAccountBtn" onclick="createAccount()">Create Account</button>
+    </div>
+    <div id="createAdminLink" style="text-align: center; margin-top: 15px; display:none;">
       <a href="admin-create.html" style="color: #667eea; text-decoration: none; font-size: 14px;">Create Admin Account</a>
     </div>
   </div>

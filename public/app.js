@@ -140,11 +140,16 @@ function selectType(type) {
     if (createBtn) {
         createBtn.style.display = (type === "admin") ? "none" : "block";
     }
-    // Show/hide master UID input for admin
+    // Show/hide master UID input for admin (temporarily hidden)
     const masterUIDInput = document.getElementById("masterUID");
     if (masterUIDInput) {
-        masterUIDInput.style.display = (type === "admin") ? "block" : "none";
-        masterUIDInput.required = (type === "admin");
+        masterUIDInput.style.display = "none"; // Temporarily disabled
+        masterUIDInput.required = false;
+    }
+    // Show/hide "Create Admin Account" link - only for admin
+    const createAdminLink = document.getElementById("createAdminLink");
+    if (createAdminLink) {
+        createAdminLink.style.display = (type === "admin") ? "block" : "none";
     }
     // Change placeholder for admin
     const usernameInput = document.getElementById("username");
@@ -242,24 +247,9 @@ function login() {
         return;
     }
     
-    // Admin login - use Firebase Auth and require master UID
+    // Admin login - use Firebase Auth (master UID temporarily disabled)
     if (userType === "admin") {
-        // Get master UID input
-        const masterUIDInput = document.getElementById("masterUID");
-        const masterUID = masterUIDInput ? masterUIDInput.value.trim() : "";
-        
-        // Validate master UID
-        if (!masterUID) {
-            showError("Please enter Master UID");
-            return;
-        }
-        
-        if (masterUID !== MASTER_UID) {
-            showError("Invalid Master UID. Access denied.");
-            recordFailedAttempt();
-            return;
-        }
-        
+        // Master UID check temporarily disabled
         // Check if user exists in admins collection and authenticate with Firebase Auth
         checkAdminAccess(u, p).then((isValid) => {
             if (isValid) {

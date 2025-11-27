@@ -49,8 +49,10 @@
   <div id="adminCreateForm" style="background: white; padding: 40px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); min-width: 300px; max-width: 400px; margin: 0 auto;">
     <input type="text" id="adminUsername" placeholder="Username" autocomplete="username" style="display: block; margin: 15px auto; padding: 15px 20px; font-size: 16px; width: 100%; max-width: 280px; border-radius: 8px; border: 2px solid #e0e0e0; transition: border-color 0.3s; box-sizing: border-box;">
     <input type="password" id="adminPassword" placeholder="Password" autocomplete="new-password" style="display: block; margin: 15px auto; padding: 15px 20px; font-size: 16px; width: 100%; max-width: 280px; border-radius: 8px; border: 2px solid #e0e0e0; transition: border-color 0.3s; box-sizing: border-box;">
-    <input type="text" id="masterUID" placeholder="Master UID" autocomplete="off" style="display: block; margin: 15px auto; padding: 15px 20px; font-size: 16px; width: 100%; max-width: 280px; border-radius: 8px; border: 2px solid #e0e0e0; transition: border-color 0.3s; box-sizing: border-box;">
-    <button onclick="createAdmin()" style="padding: 15px 30px; margin: 10px 5px; font-size: 16px; border-radius: 8px; border: none; background: #667eea; color: white; cursor: pointer; transition: all 0.3s; font-weight: 600; min-width: 120px; width: 100%; max-width: 280px; display: block; margin: 20px auto;">Create Admin</button>
+    <input type="text" id="masterUID" placeholder="Master UID (Temporarily Disabled)" autocomplete="off" style="display: none;">
+    <div style="text-align: center;">
+      <button onclick="createAdmin()" style="padding: 15px 30px; margin: 10px 5px; font-size: 16px; border-radius: 8px; border: none; background: #667eea; color: white; cursor: pointer; transition: all 0.3s; font-weight: 600; min-width: 120px;">Create Admin</button>
+    </div>
     <div id="adminCreateError" style="color: #dc3545; text-align: center; margin-top: 15px; display: none;"></div>
     <div id="adminCreateSuccess" style="color: #28a745; text-align: center; margin-top: 15px; display: none;"></div>
     <div style="text-align: center; margin-top: 20px;">
