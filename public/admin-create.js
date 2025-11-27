@@ -1,6 +1,6 @@
 // ======= ADMIN CREATION =======
 // Hardcoded master UID - change this to your desired master UID
-const MASTER_UID = "MASTER-ADMIN-UID-2024";
+const MASTER_UID = "zW3LsKJr1IZiLt149F25ObvYcX32";
 
 function showAdminError(message) {
     const errorDiv = document.getElementById("adminCreateError");

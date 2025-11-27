@@ -3,7 +3,7 @@ let userType = "";
 let loggedInUser = null;
 let adminUIDs = []; // Array of admin UIDs - should be set from Firestore or config
 // Hardcoded master UID - must match the one in admin-create.js
-const MASTER_UID = "MASTER-ADMIN-UID-2024";
+const MASTER_UID = "zW3LsKJr1IZiLt149F25ObvYcX32";
 // Initialize with empty structure - will be loaded from localStorage
 let usersDB = {student: {}, teacher: {}, admin: {}};
 let classesDB = {}; // classCode: {name, teacher, assignments: [{id, name, due}]}
