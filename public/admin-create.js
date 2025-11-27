@@ -2,6 +2,10 @@
 // Hardcoded master UID - change this to your desired master UID
 const MASTER_UID = "zW3LsKJr1IZiLt149F25ObvYcX32";
 
+// Verify MASTER_UID is set correctly on load
+console.log("MASTER_UID constant:", MASTER_UID);
+console.log("MASTER_UID length:", MASTER_UID.length);
+
 function showAdminError(message) {
     const errorDiv = document.getElementById("adminCreateError");
     const successDiv = document.getElementById("adminCreateSuccess");
@@ -52,14 +56,38 @@ async function createAdmin() {
     }
     
     // Check master UID (case-sensitive exact match, remove any extra whitespace)
-    const cleanedUID = masterUID.replace(/\s+/g, '');
-    if (cleanedUID !== MASTER_UID) {
-        console.log("Entered UID:", cleanedUID);
-        console.log("Expected UID:", MASTER_UID);
-        console.log("Lengths - Entered:", cleanedUID.length, "Expected:", MASTER_UID.length);
-        showAdminError("Invalid Master UID. Access denied. Please check your Master UID and try again.");
+    const cleanedUID = masterUID.replace(/\s+/g, '').trim();
+    
+    // Verify MASTER_UID constant is accessible
+    if (typeof MASTER_UID === 'undefined') {
+        console.error("MASTER_UID constant is not defined!");
+        showAdminError("System error: Master UID configuration missing.");
         return;
     }
+    
+    const expectedUID = String(MASTER_UID).trim();
+    
+    // Debug logging
+    console.log("=== Master UID Check ===");
+    console.log("Entered (raw):", JSON.stringify(masterUID));
+    console.log("Entered (cleaned):", JSON.stringify(cleanedUID));
+    console.log("Expected:", JSON.stringify(expectedUID));
+    console.log("Match:", cleanedUID === expectedUID);
+    console.log("Entered length:", cleanedUID.length);
+    console.log("Expected length:", expectedUID.length);
+    console.log("Character by character check:");
+    for (let i = 0; i < Math.max(cleanedUID.length, expectedUID.length); i++) {
+        if (cleanedUID[i] !== expectedUID[i]) {
+            console.log(`Mismatch at position ${i}: entered="${cleanedUID[i]}" (code ${cleanedUID.charCodeAt(i)}), expected="${expectedUID[i]}" (code ${expectedUID.charCodeAt(i)})`);
+        }
+    }
+    
+    if (cleanedUID !== expectedUID) {
+        showAdminError(`Invalid Master UID. Access denied. Please check your Master UID and try again.`);
+        return;
+    }
+    
+    console.log("Master UID validated successfully!");
     
     // Create fake email from username (Firebase Auth requires email)
     // Format: username@admins.local (e.g., "principal" becomes "principal@admins.local")
