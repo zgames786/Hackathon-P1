@@ -2,6 +2,8 @@
 let userType = "";
 let loggedInUser = null;
 let adminUIDs = []; // Array of admin UIDs - should be set from Firestore or config
+// Hardcoded master UID - must match the one in admin-create.js
+const MASTER_UID = "MASTER-ADMIN-UID-2024";
 // Initialize with empty structure - will be loaded from localStorage
 let usersDB = {student: {}, teacher: {}, admin: {}};
 let classesDB = {}; // classCode: {name, teacher, assignments: [{id, name, due}]}
@@ -138,6 +140,12 @@ function selectType(type) {
     if (createBtn) {
         createBtn.style.display = (type === "admin") ? "none" : "block";
     }
+    // Show/hide master UID input for admin
+    const masterUIDInput = document.getElementById("masterUID");
+    if (masterUIDInput) {
+        masterUIDInput.style.display = (type === "admin") ? "block" : "none";
+        masterUIDInput.required = (type === "admin");
+    }
     // Change placeholder for admin
     const usernameInput = document.getElementById("username");
     if (usernameInput) {
@@ -234,8 +242,24 @@ function login() {
         return;
     }
     
-    // Admin login - use Firebase Auth
+    // Admin login - use Firebase Auth and require master UID
     if (userType === "admin") {
+        // Get master UID input
+        const masterUIDInput = document.getElementById("masterUID");
+        const masterUID = masterUIDInput ? masterUIDInput.value.trim() : "";
+        
+        // Validate master UID
+        if (!masterUID) {
+            showError("Please enter Master UID");
+            return;
+        }
+        
+        if (masterUID !== MASTER_UID) {
+            showError("Invalid Master UID. Access denied.");
+            recordFailedAttempt();
+            return;
+        }
+        
         // Check if user exists in admins collection and authenticate with Firebase Auth
         checkAdminAccess(u, p).then((isValid) => {
             if (isValid) {
