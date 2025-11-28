@@ -1,4 +1,4 @@
-// Wait for Firebase SDK to load, then initialize
+// Wait for Firebase SDK to load, then initialize (Firebase v8)
 let firebaseInitAttempts = 0;
 const maxInitAttempts = 50; // 5 seconds max wait time (50 * 100ms)
 
@@ -31,17 +31,14 @@ function initializeFirebase() {
             // App already exists, use it
             console.log("Using existing Firebase app");
         } catch (e) {
-            // App doesn't exist, initialize it
+            // App doesn't exist, initialize it (v8 style)
             app = firebase.initializeApp(firebaseConfig);
             console.log("Firebase app initialized");
         }
         
-        const auth = firebase.auth();
-        const db = firebase.firestore();
-
-        // Make auth and db globally accessible
-        window.auth = auth;
-        window.db = db;
+        // Initialize auth and db (v8 style)
+        window.auth = firebase.auth();
+        window.db = firebase.firestore();
         window.firebaseApp = app;
         
         console.log("Firebase initialized successfully");

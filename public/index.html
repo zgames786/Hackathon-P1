@@ -5,51 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TNHA School App - Login</title>
 <link rel="stylesheet" href="style.css">
-<!-- Firebase SDK -->
-<script type="module">
-  import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-  import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-  
-  // Get Firebase Auth and Firestore
-  window.getFirebaseAuth = () => {
-    if (typeof window.firebaseApp !== 'undefined' && window.firebaseApp) {
-      return getAuth(window.firebaseApp);
-    }
-    return null;
-  };
-  
-  window.signInWithEmailAndPassword = async (auth, email, password) => {
-    return await signInWithEmailAndPassword(auth, email, password);
-  };
-  
-  // Initialize Firestore if not already initialized
-  if (typeof window.db === 'undefined') {
-    if (typeof window.firebaseApp !== 'undefined' && window.firebaseApp) {
-      window.db = getFirestore(window.firebaseApp);
-    }
-  }
-  
-  // Make Firestore functions available globally
-  if (!window.getFirestoreDocs) {
-    window.getFirestoreDocs = async (collectionName) => {
-      if (!window.db) {
-        console.error("Firestore not initialized");
-        return [];
-      }
-      try {
-        const querySnapshot = await getDocs(collection(window.db, collectionName));
-        const docs = [];
-        querySnapshot.forEach((doc) => {
-          docs.push({ id: doc.id, ...doc.data() });
-        });
-        return docs;
-      } catch (error) {
-        console.error("Error reading from Firestore:", error);
-        return [];
-      }
-    };
-  }
-</script>
+<!-- FIREBASE SDK DO NOT CHANGE -->
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+<script src="firebase-init.js"></script>
 </head>
 <body>
 <div class="login-container">
