@@ -61,17 +61,29 @@ async function createAdmin() {
     const fakeEmail = `${username}@admins.local`;
     
     try {
-        // Create user in Firebase Auth with fake email
-        if (!auth) {
-            showAdminError("Firebase Auth not initialized. Please configure Firebase.");
+        // Check if Firebase is loaded
+        if (typeof firebase === 'undefined') {
+            showAdminError("Firebase SDK not loaded. Please check your internet connection and refresh the page.");
             return;
         }
         
-        const userCredential = await auth.createUserWithEmailAndPassword(fakeEmail, password);
+        // Use window.auth and window.db from firebase-init.js, or fallback to firebase directly
+        const authInstance = window.auth || (firebase && firebase.auth ? firebase.auth() : null);
+        const dbInstance = window.db || (firebase && firebase.firestore ? firebase.firestore() : null);
+        
+        if (!authInstance) {
+            showAdminError("Firebase Auth not initialized. Please check firebase-init.js configuration.");
+            console.error("Auth instance:", authInstance);
+            console.error("Window.auth:", window.auth);
+            console.error("Firebase:", firebase);
+            return;
+        }
+        
+        const userCredential = await authInstance.createUserWithEmailAndPassword(fakeEmail, password);
         const user = userCredential.user;
         
         // Add to admins collection with uid and username
-        if (!db) {
+        if (!dbInstance) {
             showAdminError("Firestore not initialized. Admin user created but not added to collection.");
             return;
         }
@@ -81,7 +93,7 @@ async function createAdmin() {
             username: username,
             createdAt: new Date().toISOString()
         };
-        await db.collection("admins").add(adminData);
+        await dbInstance.collection("admins").add(adminData);
         
         showAdminSuccess("Admin account created successfully! You can now login.");
         
