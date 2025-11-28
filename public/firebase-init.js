@@ -1,8 +1,8 @@
 const firebaseConfig = {
     apiKey: "AIzaSyDDaOx0GXBrDOx_-NBUWQVQXbYfutuclWQ",
-    authDomain: "thna-school-app.firebaseapp.com",
-    projectId: "thna-school-app",
-    storageBucket: "thna-school-app.firebasestorage.app",
+    authDomain: "tnha-school-app.firebaseapp.com",
+    projectId: "tnha-school-app",
+    storageBucket: "tnha-school-app.firebasestorage.app",
     messagingSenderId: "777172524006",
     appId: "1:777172524006:web:7284bdc57050df287bd427",
     measurementId: "G-B1E8WXYR9V"
