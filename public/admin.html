@@ -6,41 +6,6 @@
 <title>TNHA School App - Admin Dashboard</title>
 <link rel="stylesheet" href="style.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<!-- Firebase SDK -->
-<script type="module">
-  import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-  
-  // Initialize Firestore - using existing Firebase app if available
-  // Note: firebaseApp should be initialized elsewhere with firebaseConfig
-  // This code assumes firebaseApp is already initialized
-  if (typeof window.firebaseApp !== 'undefined' && window.firebaseApp) {
-    window.db = getFirestore(window.firebaseApp);
-  } else {
-    // Try to get db if it's already set
-    if (typeof window.db === 'undefined') {
-      console.warn("Firebase not initialized. Please ensure Firebase is initialized with firebaseConfig before loading this page.");
-    }
-  }
-  
-  // Make Firestore functions available globally
-  window.getFirestoreDocs = async (collectionName) => {
-    if (!window.db) {
-      console.error("Firestore not initialized");
-      return [];
-    }
-    try {
-      const querySnapshot = await getDocs(collection(window.db, collectionName));
-      const docs = [];
-      querySnapshot.forEach((doc) => {
-        docs.push({ id: doc.id, ...doc.data() });
-      });
-      return docs;
-    } catch (error) {
-      console.error("Error reading from Firestore:", error);
-      return [];
-    }
-  };
-</script>
 </head>
 <body>
 
@@ -74,7 +39,38 @@
         <h3>Total Teachers</h3>
         <div id="totalTeachers" class="stat-number">0</div>
       </div>
+      <div class="admin-stat-box pending-fees">
+        <h3>Pending Fees</h3>
+        <div id="totalPendingFees" class="stat-number">$0.00</div>
+      </div>
+      <div class="admin-stat-box collected-fees">
+        <h3>Collected Fees</h3>
+        <div id="totalCollectedFees" class="stat-number">$0.00</div>
+      </div>
     </div>
+    
+    <div class="dashboard-charts-container">
+      <div class="dashboard-chart-card">
+        <h3>Fees Overview</h3>
+        <canvas id="dashboardFeesChart"></canvas>
+      </div>
+      <div class="dashboard-chart-card">
+        <h3>Attendance Summary</h3>
+        <canvas id="dashboardAttendanceChart"></canvas>
+      </div>
+    </div>
+    
+    <div class="dashboard-summary-grid">
+      <div class="summary-card">
+        <h3>Attendance Summary</h3>
+        <div id="attendanceSummary"></div>
+      </div>
+      <div class="summary-card">
+        <h3>Recent Activity</h3>
+        <div id="recentActivity"></div>
+      </div>
+    </div>
+    
     <div class="admin-classes-box">
       <h3>Classes Overview</h3>
       <div id="classesList"></div>
@@ -90,10 +86,7 @@
 </div>
 
 <div id="feesTab" style="display:none;">
-  <h2 style="text-align: center; color: #667eea; margin-bottom: 20px;">Fees</h2>
-  <div style="text-align: center; padding: 40px;">
-    <p style="color: #666; font-size: 18px;">Fees management coming soon...</p>
-  </div>
+  <!-- Fees content will be loaded by fees.js -->
 </div>
 
 <div id="expensesTab" style="display:none;">
@@ -118,17 +111,11 @@
 </div>
 
 <div id="attendanceTab" style="display:none;">
-  <h2 style="text-align: center; color: #667eea; margin-bottom: 20px;">Attendance</h2>
-  <div style="text-align: center; padding: 40px;">
-    <p style="color: #666; font-size: 18px;">Attendance tracking coming soon...</p>
-  </div>
+  <!-- Attendance content will be loaded by attendance.js -->
 </div>
 
 <div id="adminTab" style="display:none;">
-  <h2 style="text-align: center; color: #667eea; margin-bottom: 20px;">Admin Settings</h2>
-  <div style="text-align: center; padding: 40px;">
-    <p style="color: #666; font-size: 18px;">Admin settings coming soon...</p>
-  </div>
+  <!-- Management content will be loaded by management.js -->
 </div>
 
 <div id="helpTab" style="display:none;">
@@ -138,8 +125,15 @@
   </div>
 </div>
 
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js"></script>
+<script src="firebase-init.js"></script>
 <script src="app.js"></script>
 <script src="admin.js"></script>
+<script src="fees.js"></script>
+<script src="attendance.js"></script>
+<script src="management.js"></script>
 </body>
 </html>
 

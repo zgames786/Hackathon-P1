@@ -19,8 +19,8 @@ async function checkAdminAccess() {
     
     // Verify user's UID exists in admins collection
     try {
-        if (window.db && window.getFirestoreDocs) {
-            const admins = await window.getFirestoreDocs("admins");
+        if (window.db) {
+            const admins = await getFirestoreDocs("admins");
             const admin = admins.find(a => a.uid === storedUID);
             
             if (!admin) {
@@ -41,28 +41,47 @@ async function checkAdminAccess() {
     return true;
 }
 
+// Helper function to get Firestore docs using compat SDK
+async function getFirestoreDocs(collectionName) {
+    if (!window.db) {
+        console.error("Firestore not initialized");
+        return [];
+    }
+    try {
+        const snapshot = await window.db.collection(collectionName).get();
+        const docs = [];
+        snapshot.forEach((doc) => {
+            docs.push({ id: doc.id, ...doc.data() });
+        });
+        return docs;
+    } catch (error) {
+        console.error("Error reading from Firestore:", error);
+        return [];
+    }
+}
+
 // Load admin data from Firestore
 async function loadAdminData() {
     if (!window.db) {
         console.error("Firestore not initialized");
-        document.getElementById("totalStudents").textContent = "Error";
-        document.getElementById("totalTeachers").textContent = "Error";
-        document.getElementById("classesList").innerHTML = "<p>Firestore not initialized. Please configure Firebase.</p>";
+        const totalStudentsEl = document.getElementById("totalStudents");
+        const totalTeachersEl = document.getElementById("totalTeachers");
+        const classesListEl = document.getElementById("classesList");
+        if (totalStudentsEl) totalStudentsEl.textContent = "Error";
+        if (totalTeachersEl) totalTeachersEl.textContent = "Error";
+        if (classesListEl) classesListEl.innerHTML = "<p>Firestore not initialized. Please configure Firebase.</p>";
         return;
     }
     
     try {
         // Load students
-        const studentsSnapshot = await window.getFirestoreDocs("students");
-        adminData.students = studentsSnapshot;
+        adminData.students = await getFirestoreDocs("students");
         
         // Load teachers
-        const teachersSnapshot = await window.getFirestoreDocs("teachers");
-        adminData.teachers = teachersSnapshot;
+        adminData.teachers = await getFirestoreDocs("teachers");
         
         // Load classes
-        const classesSnapshot = await window.getFirestoreDocs("classes");
-        adminData.classes = classesSnapshot;
+        adminData.classes = await getFirestoreDocs("classes");
         
         // Update dashboard
         updateAdminDashboard();
@@ -73,58 +92,195 @@ async function loadAdminData() {
 }
 
 // Update admin dashboard with data
-function updateAdminDashboard() {
+async function updateAdminDashboard() {
     // Update total students
     const totalStudents = adminData.students.length;
-    document.getElementById("totalStudents").textContent = totalStudents;
+    const totalStudentsEl = document.getElementById("totalStudents");
+    if (totalStudentsEl) totalStudentsEl.textContent = totalStudents;
     
     // Update total teachers
     const totalTeachers = adminData.teachers.length;
-    document.getElementById("totalTeachers").textContent = totalTeachers;
+    const totalTeachersEl = document.getElementById("totalTeachers");
+    if (totalTeachersEl) totalTeachersEl.textContent = totalTeachers;
+    
+    // Load and update fees data
+    await updateDashboardFees();
+    
+    // Load and update attendance data
+    await updateDashboardAttendance();
+    
+    // Update recent activity
+    updateRecentActivity();
+    
+    // Render charts
+    renderDashboardCharts();
     
     // Update classes list
     const classesList = document.getElementById("classesList");
-    if (adminData.classes.length === 0) {
-        classesList.innerHTML = "<p style='text-align: center; color: #666; padding: 20px;'>No classes found.</p>";
-        return;
+    if (classesList) {
+        if (adminData.classes.length === 0) {
+            classesList.innerHTML = "<p style='text-align: center; color: #666; padding: 20px;'>No classes found.</p>";
+        } else {
+            let html = "";
+            adminData.classes.forEach(classDoc => {
+                const className = classDoc.className || classDoc.name || "Unnamed Class";
+                const teacherUID = classDoc.teacherUID || classDoc.teacher || "";
+                
+                // Find teacher name
+                const teacher = adminData.teachers.find(t => t.uid === teacherUID || t.id === teacherUID);
+                const teacherName = teacher ? (teacher.name || teacher.email || teacherUID) : "No Teacher";
+                
+                // Count students in this class
+                let studentCount = 0;
+                if (classDoc.studentUIDs && Array.isArray(classDoc.studentUIDs)) {
+                    studentCount = classDoc.studentUIDs.length;
+                } else if (classDoc.studentCount !== undefined) {
+                    studentCount = classDoc.studentCount;
+                } else {
+                    studentCount = adminData.students.filter(student => {
+                        const studentClasses = student.classes || [];
+                        return studentClasses.includes(classDoc.id) || studentClasses.includes(className);
+                    }).length;
+                }
+                
+                html += `
+                    <div class="admin-class-item">
+                        <h4>${className}</h4>
+                        <div class="class-stats">
+                            <p><strong>Teacher:</strong> ${teacherName}</p>
+                            <p><strong>Students:</strong> ${studentCount}</p>
+                        </div>
+                    </div>
+                `;
+            });
+            classesList.innerHTML = html;
+        }
+    }
+}
+
+// Update dashboard fees
+async function updateDashboardFees() {
+    if (!window.db) return;
+    
+    try {
+        const studentFees = await getFirestoreDocs("studentFees");
+        const payments = await getFirestoreDocs("payments");
+        
+        const totalPending = studentFees
+            .filter(f => f.status === "pending")
+            .reduce((sum, f) => sum + (parseFloat(f.amount) || 0), 0);
+        
+        const totalCollected = payments
+            .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+        
+        const pendingFeesEl = document.getElementById("totalPendingFees");
+        const collectedFeesEl = document.getElementById("totalCollectedFees");
+        if (pendingFeesEl) pendingFeesEl.textContent = `$${totalPending.toFixed(2)}`;
+        if (collectedFeesEl) collectedFeesEl.textContent = `$${totalCollected.toFixed(2)}`;
+    } catch (error) {
+        console.error("Error updating dashboard fees:", error);
+    }
+}
+
+// Update dashboard attendance
+async function updateDashboardAttendance() {
+    if (!window.db) return;
+    
+    try {
+        const attendanceRecords = await getFirestoreDocs("attendance");
+        const today = new Date().toISOString().split('T')[0];
+        const todayRecords = attendanceRecords.filter(r => r.date === today);
+        
+        const presentCount = todayRecords.filter(r => r.status === "present").length;
+        const absentCount = todayRecords.filter(r => r.status === "absent").length;
+        const totalToday = presentCount + absentCount;
+        
+        const attendanceSummaryEl = document.getElementById("attendanceSummary");
+        if (attendanceSummaryEl) {
+            attendanceSummaryEl.innerHTML = `
+                <div class="attendance-summary-item">
+                    <span>Today's Attendance:</span>
+                    <span><strong>${totalToday} students</strong></span>
+                </div>
+                <div class="attendance-summary-item present">
+                    <span>Present:</span>
+                    <span><strong>${presentCount}</strong></span>
+                </div>
+                <div class="attendance-summary-item absent">
+                    <span>Absent:</span>
+                    <span><strong>${absentCount}</strong></span>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error("Error updating dashboard attendance:", error);
+    }
+}
+
+// Update recent activity
+function updateRecentActivity() {
+    const recentActivityEl = document.getElementById("recentActivity");
+    if (!recentActivityEl) return;
+    
+    // Get recent payments and attendance
+    const activities = [];
+    
+    // This would be populated from recent payments and attendance records
+    // For now, show placeholder
+    recentActivityEl.innerHTML = `
+        <div class="activity-item">
+            <span class="activity-time">Today</span>
+            <span class="activity-text">System initialized</span>
+        </div>
+    `;
+}
+
+// Render dashboard charts
+function renderDashboardCharts() {
+    // Fees chart
+    const feesCtx = document.getElementById("dashboardFeesChart");
+    if (feesCtx && window.Chart) {
+        // This will be updated with actual data when fees are loaded
+        new Chart(feesCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Pending', 'Collected'],
+                datasets: [{
+                    data: [0, 0],
+                    backgroundColor: ['#ffc107', '#28a745']
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true
+            }
+        });
     }
     
-    let html = "";
-    adminData.classes.forEach(classDoc => {
-        const className = classDoc.className || classDoc.name || "Unnamed Class";
-        const teacherUID = classDoc.teacherUID || classDoc.teacher || "";
-        
-        // Find teacher name
-        const teacher = adminData.teachers.find(t => t.uid === teacherUID || t.id === teacherUID);
-        const teacherName = teacher ? (teacher.name || teacher.email || teacherUID) : "No Teacher";
-        
-        // Count students in this class
-        // Check if class has studentUIDs array or studentCount
-        let studentCount = 0;
-        if (classDoc.studentUIDs && Array.isArray(classDoc.studentUIDs)) {
-            studentCount = classDoc.studentUIDs.length;
-        } else if (classDoc.studentCount !== undefined) {
-            studentCount = classDoc.studentCount;
-        } else {
-            // Count students that have this class in their classes array
-            studentCount = adminData.students.filter(student => {
-                const studentClasses = student.classes || [];
-                return studentClasses.includes(classDoc.id) || studentClasses.includes(className);
-            }).length;
-        }
-        
-        html += `
-            <div class="admin-class-item">
-                <h4>${className}</h4>
-                <div class="class-stats">
-                    <p><strong>Teacher:</strong> ${teacherName}</p>
-                    <p><strong>Students:</strong> ${studentCount}</p>
-                </div>
-            </div>
-        `;
-    });
-    
-    classesList.innerHTML = html;
+    // Attendance chart
+    const attendanceCtx = document.getElementById("dashboardAttendanceChart");
+    if (attendanceCtx && window.Chart) {
+        new Chart(attendanceCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Present', 'Absent'],
+                datasets: [{
+                    label: 'Today',
+                    data: [0, 0],
+                    backgroundColor: ['#28a745', '#dc3545']
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
 }
 
 // Admin tab switching
@@ -150,9 +306,15 @@ window.showAdminTab = function(tab) {
         if (targetTab) {
             targetTab.style.display = "block";
             
-            // Reload dashboard data if dashboard tab is selected
+            // Load appropriate data based on tab
             if (tab === "dashboard") {
                 loadAdminData();
+            } else if (tab === "fees" && window.loadFeesData) {
+                window.loadFeesData();
+            } else if (tab === "attendance" && window.loadAttendanceData) {
+                window.loadAttendanceData();
+            } else if (tab === "admin" && window.renderManagementInterface) {
+                window.renderManagementInterface();
             }
         }
     } catch (error) {

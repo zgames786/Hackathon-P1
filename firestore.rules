@@ -1,0 +1,144 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper function to check if user is authenticated admin
+    function isAdmin() {
+      return request.auth != null && 
+             exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+    
+    // Helper function to validate fee category structure
+    function isValidFeeCategory(data) {
+      return data.keys().hasAll(['name', 'createdAt']) &&
+             data.name is string &&
+             data.name.size() > 0 &&
+             (!('description' in data) || data.description is string);
+    }
+    
+    // Helper function to validate student fee structure
+    function isValidStudentFee(data) {
+      return data.keys().hasAll(['studentUID', 'categoryId', 'amount', 'status', 'createdAt']) &&
+             data.studentUID is string &&
+             data.categoryId is string &&
+             data.amount is string &&
+             data.status is string &&
+             data.status in ['pending', 'paid'] &&
+             (!('dueDate' in data) || data.dueDate is string) &&
+             (!('notes' in data) || data.notes is string);
+    }
+    
+    // Helper function to validate payment structure
+    function isValidPayment(data) {
+      return data.keys().hasAll(['studentUID', 'feeId', 'categoryId', 'amount', 'paymentDate', 'method', 'createdAt']) &&
+             data.studentUID is string &&
+             data.feeId is string &&
+             data.categoryId is string &&
+             data.amount is string &&
+             data.paymentDate is string &&
+             data.method is string &&
+             data.method in ['cash', 'check', 'bank_transfer', 'online'] &&
+             (!('notes' in data) || data.notes is string);
+    }
+    
+    // Helper function to validate attendance structure
+    function isValidAttendance(data) {
+      return data.keys().hasAll(['classId', 'studentUID', 'date', 'status', 'createdAt']) &&
+             data.classId is string &&
+             data.studentUID is string &&
+             data.date is string &&
+             data.status is string &&
+             data.status in ['present', 'absent'];
+    }
+    
+    // Helper function to validate student structure
+    function isValidStudent(data) {
+      return data.keys().hasAll(['name', 'email', 'createdAt']) &&
+             data.name is string &&
+             data.name.size() > 0 &&
+             data.email is string &&
+             data.email.size() > 0 &&
+             (!('classes' in data) || data.classes is list) &&
+             (!('uid' in data) || data.uid is string);
+    }
+    
+    // Helper function to validate teacher structure
+    function isValidTeacher(data) {
+      return data.keys().hasAll(['name', 'email', 'createdAt']) &&
+             data.name is string &&
+             data.name.size() > 0 &&
+             data.email is string &&
+             data.email.size() > 0 &&
+             (!('uid' in data) || data.uid is string);
+    }
+    
+    // Admins collection - only admins can read/write
+    match /admins/{adminId} {
+      allow read, write: if isAdmin();
+    }
+    
+    // Fee Categories - only admins can read/write
+    match /feeCategories/{categoryId} {
+      allow read, write: if isAdmin() && 
+        (!exists(/databases/$(database)/documents/feeCategories/$(categoryId)) || 
+         isValidFeeCategory(request.resource.data));
+      allow create: if isAdmin() && isValidFeeCategory(request.resource.data);
+      allow update: if isAdmin() && isValidFeeCategory(request.resource.data);
+      allow delete: if isAdmin();
+    }
+    
+    // Student Fees - only admins can read/write
+    match /studentFees/{feeId} {
+      allow read, write: if isAdmin();
+      allow create: if isAdmin() && isValidStudentFee(request.resource.data);
+      allow update: if isAdmin() && isValidStudentFee(request.resource.data);
+      allow delete: if isAdmin();
+    }
+    
+    // Payments - only admins can read/write
+    match /payments/{paymentId} {
+      allow read, write: if isAdmin();
+      allow create: if isAdmin() && isValidPayment(request.resource.data);
+      allow update: if isAdmin() && isValidPayment(request.resource.data);
+      allow delete: if isAdmin();
+    }
+    
+    // Attendance - only admins can read/write
+    match /attendance/{attendanceId} {
+      allow read, write: if isAdmin();
+      allow create: if isAdmin() && isValidAttendance(request.resource.data);
+      allow update: if isAdmin() && isValidAttendance(request.resource.data);
+      allow delete: if isAdmin();
+    }
+    
+    // Students - only admins can read/write
+    match /students/{studentId} {
+      allow read, write: if isAdmin();
+      allow create: if isAdmin() && isValidStudent(request.resource.data);
+      allow update: if isAdmin() && isValidStudent(request.resource.data);
+      allow delete: if isAdmin();
+    }
+    
+    // Teachers - only admins can read/write
+    match /teachers/{teacherId} {
+      allow read, write: if isAdmin();
+      allow create: if isAdmin() && isValidTeacher(request.resource.data);
+      allow update: if isAdmin() && isValidTeacher(request.resource.data);
+      allow delete: if isAdmin();
+    }
+    
+    // Classes - admins can read/write all, teachers can read their own classes
+    match /classes/{classId} {
+      allow read: if isAdmin() || 
+        (request.auth != null && 
+         resource.data.teacherUID == request.auth.uid);
+      allow write: if isAdmin();
+    }
+    
+    // Default: deny all other collections
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
+
