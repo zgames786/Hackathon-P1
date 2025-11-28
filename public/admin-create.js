@@ -62,20 +62,26 @@ async function createAdmin() {
     
     try {
         // Create user in Firebase Auth with fake email
-        if (!window.createAdminUser) {
+        if (!auth) {
             showAdminError("Firebase Auth not initialized. Please configure Firebase.");
             return;
         }
         
-        const user = await window.createAdminUser(fakeEmail, password);
+        const userCredential = await auth.createUserWithEmailAndPassword(fakeEmail, password);
+        const user = userCredential.user;
         
         // Add to admins collection with uid and username
-        if (!window.addAdminToCollection) {
+        if (!db) {
             showAdminError("Firestore not initialized. Admin user created but not added to collection.");
             return;
         }
         
-        await window.addAdminToCollection(user.uid, username);
+        const adminData = {
+            uid: user.uid,
+            username: username,
+            createdAt: new Date().toISOString()
+        };
+        await db.collection("admins").add(adminData);
         
         showAdminSuccess("Admin account created successfully! You can now login.");
         
