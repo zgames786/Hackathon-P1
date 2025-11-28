@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TNHA School App - Management</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="hamburger" onclick="toggleSidebar()">☰</div>
+
+<div id="sidebar">
+  <button onclick="window.location.href='admin.html'">🏠 Dashboard</button>
+  <button onclick="window.location.href='admin.html#communication'">💬 Communication</button>
+  <button onclick="window.location.href='fees.html'">💰 Fees</button>
+  <button onclick="window.location.href='admin.html#expenses'">📊 Expenses</button>
+  <button onclick="window.location.href='admin.html#transport'">🚌 Transport</button>
+  <button onclick="window.location.href='admin.html#reports'">📈 Reports</button>
+  <button onclick="window.location.href='attendance.html'">✅ Attendance</button>
+  <button onclick="window.location.href='management.html'">👨‍💼 Admin</button>
+  <button onclick="window.location.href='admin.html#help'">❓ Help</button>
+  <button onclick="logout()">🚪 Logout</button>
+</div>
+
+<div class="header-title">TNHA School App - Management</div>
+<div class="header-subtitle">Welcome, <span id="userNameDisplay"></span>!</div>
+
+<div id="adminTab">
+  <!-- Management content will be loaded by management.js -->
+</div>
+
+<!-- FIREBASE SDK DO NOT CHANGE -->
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+<script src="firebase-init.js"></script>
+<script src="app.js"></script>
+<script src="admin.js"></script>
+<script src="management.js"></script>
+
+<script>
+// Make adminData and getFirestoreDocs globally accessible for management.js
+window.adminData = adminData;
+window.getFirestoreDocs = getFirestoreDocs;
+
+// Initialize management page
+window.onload = async function() {
+    if (window.location.pathname.includes("management.html")) {
+        const hasAccess = await checkAdminAccess();
+        if (!hasAccess) {
+            return;
+        }
+        
+        // Display admin username or UID
+        const storedUsername = localStorage.getItem("loggedInUser");
+        const adminUID = localStorage.getItem("adminUID");
+        const displayName = storedUsername ? storedUsername.replace("admin_", "") : adminUID;
+        if (document.getElementById("userNameDisplay")) {
+            document.getElementById("userNameDisplay").innerText = displayName;
+        }
+        
+        // Load admin data first, then render management interface
+        await loadAdminData();
+        if (window.renderManagementInterface) {
+            window.renderManagementInterface();
+        }
+    }
+};
+
+// Toggle sidebar
+function toggleSidebar() {
+    const sidebar = document.getElementById("sidebar");
+    if (sidebar) {
+        sidebar.classList.toggle("show");
+    }
+}
+
+// Logout function
+function logout() {
+    localStorage.removeItem("loggedInUser");
+    localStorage.removeItem("userType");
+    localStorage.removeItem("adminUID");
+    window.location.href = "index.html";
+}
+</script>
+
+</body>
+</html>
+

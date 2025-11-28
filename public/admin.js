@@ -6,6 +6,9 @@ let adminData = {
     classes: []
 };
 
+// Make adminData globally accessible
+window.adminData = adminData;
+
 // Check if user is admin by verifying their UID exists in admins collection
 async function checkAdminAccess() {
     const storedUID = localStorage.getItem("adminUID");
@@ -59,6 +62,9 @@ async function getFirestoreDocs(collectionName) {
         return [];
     }
 }
+
+// Make getFirestoreDocs globally accessible
+window.getFirestoreDocs = getFirestoreDocs;
 
 // Load admin data from Firestore
 async function loadAdminData() {
