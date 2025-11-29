@@ -63,14 +63,5 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Rotate every 5 seconds
     setInterval(rotateToNext, 5000);
-    
-    // Add click handlers to dots
-    const dots = document.querySelectorAll('.dot');
-    dots.forEach((dot, index) => {
-        dot.addEventListener('click', function() {
-            currentIndex = index;
-            updateRotator(index);
-        });
-    });
 });
 
