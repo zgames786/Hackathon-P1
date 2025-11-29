@@ -288,9 +288,9 @@ async function checkAdminAccess(username, password) {
         const fakeEmail = `${username}@admins.local`;
         
         // First, try to sign in with Firebase Auth
-        if (window.getFirebaseAuth && window.signInWithEmailAndPassword) {
+        if (window.auth && window.auth.signInWithEmailAndPassword) {
             try {
-                const userCredential = await window.signInWithEmailAndPassword(window.getFirebaseAuth(), fakeEmail, password);
+                const userCredential = await window.auth.signInWithEmailAndPassword(fakeEmail, password);
                 const user = userCredential.user;
                 
                 // After successful auth, verify user's UID exists in admins collection
