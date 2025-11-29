@@ -284,28 +284,34 @@ function login() {
 // Check admin access using Firebase Auth and admins collection
 async function checkAdminAccess(username, password) {
     try {
+        console.log("Step 1: username:", username);
+        
         // Create fake email: username@admins.local
         const fakeEmail = `${username}@admins.local`;
+        console.log("Step 2: fakeEmail:", fakeEmail);
         
-        // First, try to sign in with Firebase Auth
+        // Sign in with Firebase Auth
         if (window.auth && window.auth.signInWithEmailAndPassword) {
+            console.log("Step 3: attempting Firebase Auth");
             try {
                 const userCredential = await window.auth.signInWithEmailAndPassword(fakeEmail, password);
                 const user = userCredential.user;
+                console.log("Step 4: Auth success, uid:", user.uid);
                 
-                // After successful auth, verify user's UID exists in admins collection
-                if (window.db && window.getFirestoreDocs) {
-                    const admins = await window.getFirestoreDocs("admins");
-                    const admin = admins.find(a => a.uid === user.uid);
+                // After successful auth, verify admin document exists in Firestore
+                if (window.db) {
+                    console.log("Step 5: checking admins collection");
+                    const adminDoc = await window.db.collection("admins").doc(username).get();
                     
-                    if (!admin) {
-                        // User authenticated but UID not in admins collection
+                    if (adminDoc.exists) {
+                        // Admin document exists, login succeeds
+                        localStorage.setItem("adminUID", user.uid);
+                        return true;
+                    } else {
+                        // Admin document does not exist
+                        console.log("Admin document not found for username:", username);
                         return false;
                     }
-                    
-                    // Store the UID from Firebase Auth
-                    localStorage.setItem("adminUID", user.uid);
-                    return true;
                 }
                 
                 // If Firestore not available but auth succeeded, allow access
@@ -313,17 +319,8 @@ async function checkAdminAccess(username, password) {
                 return true;
             } catch (authError) {
                 // Auth failed
+                console.error("Auth error:", authError);
                 return false;
-            }
-        }
-        
-        // If Firebase Auth not available, check admins collection only
-        if (window.db && window.getFirestoreDocs) {
-            const admins = await window.getFirestoreDocs("admins");
-            const admin = admins.find(a => a.username === username);
-            if (admin) {
-                localStorage.setItem("adminUID", admin.uid || admin.id);
-                return true;
             }
         }
         
