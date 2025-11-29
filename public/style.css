@@ -1,7 +1,7 @@
 /* ===== BODY & GENERAL ===== */
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: #D4C4A8 url('images/pattern.svg') repeat;
     margin: 0;
     padding: 0;
     min-height: 100vh;
@@ -11,13 +11,29 @@ body {
 .login-container {
     position: relative;
     z-index: 2000;
-    text-align: center;
-    padding: 80px 20px;
+    padding: 40px 20px;
     min-height: 100vh;
     display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    max-width: 1400px;
+    margin: 0 auto;
+    gap: 40px;
+}
+
+.login-left {
+    flex: 1;
+    max-width: 500px;
+    padding-top: 20px;
+}
+
+.login-right {
+    flex: 1;
+    max-width: 500px;
+    display: flex;
     flex-direction: column;
-    justify-content: center;
-    align-items: center;
+    gap: 30px;
+    padding-top: 20px;
 }
 
 /* ===== TITLE ===== */
@@ -25,26 +41,32 @@ body {
     font-size: 42px;
     font-weight: bold;
     margin-bottom: 10px;
+    margin-top: 0;
     color: white;
     text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+    text-align: left;
 }
 
 .login-container h2 {
     font-size: 24px;
-    margin-bottom: 40px;
+    margin-bottom: 30px;
+    margin-top: 0;
     color: rgba(255,255,255,0.9);
+    text-align: left;
 }
 
 /* ===== ACCOUNT TYPE BUTTONS ===== */
 .account-choice {
     display: flex;
-    gap: 20px;
+    flex-direction: column;
+    gap: 15px;
     margin-bottom: 30px;
+    align-items: flex-start;
 }
 
 .account-choice button {
-    padding: 25px 50px;
-    font-size: 22px;
+    padding: 20px 40px;
+    font-size: 20px;
     cursor: pointer;
     border: none;
     border-radius: 15px;
@@ -53,6 +75,9 @@ body {
     transition: all 0.3s;
     box-shadow: 0 4px 15px rgba(0,0,0,0.2);
     font-weight: 600;
+    width: 100%;
+    max-width: 300px;
+    text-align: left;
 }
 
 .account-choice button:hover {
@@ -122,6 +147,97 @@ body {
 
 #loginForm button:active {
     transform: translateY(0);
+}
+
+/* ===== PHOTO ROTATOR ===== */
+.photo-rotator {
+    width: 100%;
+    max-width: 500px;
+    height: 350px;
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    background: white;
+}
+
+.photo-rotator img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: opacity 0.5s ease-in-out;
+    opacity: 1;
+}
+
+/* ===== QUOTE ROTATOR ===== */
+.quote-rotator {
+    width: 100%;
+    max-width: 500px;
+    background: white;
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    text-align: center;
+}
+
+.quote-rotator p {
+    font-size: 18px;
+    font-style: italic;
+    color: #333;
+    margin: 0 0 20px 0;
+    min-height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.5s ease-in-out;
+    opacity: 1;
+}
+
+.quote-dots {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #D4C4A8;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.dot.active {
+    background: #8B6F47;
+    transform: scale(1.2);
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 1024px) {
+    .login-container {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .login-left,
+    .login-right {
+        max-width: 100%;
+        width: 100%;
+    }
+    
+    .login-container h1,
+    .login-container h2 {
+        text-align: center;
+    }
+    
+    .account-choice {
+        align-items: center;
+    }
+    
+    .account-choice button {
+        text-align: center;
+    }
 }
 
 /* ===== SIDEBAR ===== */
