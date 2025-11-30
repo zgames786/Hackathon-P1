@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TNHA School App - Login</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 <!-- FIREBASE SDK DO NOT CHANGE -->
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
@@ -15,7 +16,10 @@
 <div class="login-wrapper">
   <div class="login-container">
     <div class="login-left">
-      <h1>TNHA School App</h1>
+      <div id="title-container">
+        <img src="images/tnha-logo.png" id="tnha-logo" alt="TNHA Logo">
+        <h1 id="main-title">TNHA School App</h1>
+      </div>
       <h2>Select Account Type</h2>
       <div class="account-choice">
         <button onclick="selectType('student')">Student 📚</button>
