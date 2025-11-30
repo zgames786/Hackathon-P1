@@ -12,42 +12,44 @@
 <script src="firebase-init.js"></script>
 </head>
 <body>
-<div class="login-container">
-  <div class="login-left">
-    <h1>TNHA School App</h1>
-    <h2>Select Account Type</h2>
-    <div class="account-choice">
-      <button onclick="selectType('student')">Student 📚</button>
-      <button onclick="selectType('teacher')">Teacher ✏️</button>
-      <button onclick="selectType('admin')">Admin 👨‍💼</button>
+<div class="login-wrapper">
+  <div class="login-container">
+    <div class="login-left">
+      <h1>TNHA School App</h1>
+      <h2>Select Account Type</h2>
+      <div class="account-choice">
+        <button onclick="selectType('student')">Student 📚</button>
+        <button onclick="selectType('teacher')">Teacher ✏️</button>
+        <button onclick="selectType('admin')">Admin 👨‍💼</button>
+      </div>
+
+      <div id="loginForm" style="display:none;">
+        <input type="text" id="username" placeholder="Username" autocomplete="username">
+        <input type="password" id="password" placeholder="Password" autocomplete="current-password">
+        <input type="text" id="masterUID" placeholder="Master UID (Admin only)" autocomplete="off" style="display:none;">
+        <div class="login-form-buttons">
+          <button onclick="login()">Login</button>
+          <button id="createAccountBtn" onclick="createAccount()">Create Account</button>
+        </div>
+        <div id="createAdminLink" style="text-align: center; margin-top: 15px; display:none;">
+          <a href="admin-create.html" style="color: #667eea; text-decoration: none; font-size: 14px;">Create Admin Account</a>
+        </div>
+      </div>
     </div>
 
-    <div id="loginForm" style="display:none;">
-      <input type="text" id="username" placeholder="Username" autocomplete="username">
-      <input type="password" id="password" placeholder="Password" autocomplete="current-password">
-      <input type="text" id="masterUID" placeholder="Master UID (Admin only)" autocomplete="off" style="display:none;">
-      <div style="text-align: center;">
-        <button onclick="login()">Login</button>
-        <button id="createAccountBtn" onclick="createAccount()">Create Account</button>
+    <div class="login-right">
+      <div class="photo-rotator">
+        <img id="rotatingPhoto" src="images/photo1.jpg" alt="Awards photo">
       </div>
-      <div id="createAdminLink" style="text-align: center; margin-top: 15px; display:none;">
-        <a href="admin-create.html" style="color: #667eea; text-decoration: none; font-size: 14px;">Create Admin Account</a>
-      </div>
-    </div>
-  </div>
-
-  <div class="login-right">
-    <div class="photo-rotator">
-      <img id="rotatingPhoto" src="images/photo1.jpg" alt="Awards photo">
-    </div>
-    <div class="quote-rotator">
-      <p id="rotatingQuote">An investment in knowledge pays the best interest.</p>
-      <div class="quote-dots">
-        <span class="dot active"></span>
-        <span class="dot"></span>
-        <span class="dot"></span>
-        <span class="dot"></span>
-        <span class="dot"></span>
+      <div class="quote-rotator">
+        <p id="rotatingQuote">An investment in knowledge pays the best interest.</p>
+        <div class="quote-dots">
+          <span class="dot active"></span>
+          <span class="dot"></span>
+          <span class="dot"></span>
+          <span class="dot"></span>
+          <span class="dot"></span>
+        </div>
       </div>
     </div>
   </div>

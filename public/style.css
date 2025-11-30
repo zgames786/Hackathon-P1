@@ -1,30 +1,33 @@
 /* ===== BODY & GENERAL ===== */
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: #D4C4A8 url('images/pattern.svg') repeat;
+    background: #E8DDC8 url('images/pattern.svg') repeat;
     margin: 0;
     padding: 0;
     min-height: 100vh;
 }
 
+/* ===== LOGIN WRAPPER ===== */
+.login-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 40px 20px;
+}
+
 /* ===== LOGIN CONTAINER ===== */
 .login-container {
-    position: relative;
-    z-index: 2000;
-    padding: 20px 20px;
-    min-height: 100vh;
     display: flex;
-    justify-content: space-between;
+    gap: 60px;
+    max-width: 1200px;
+    width: 100%;
     align-items: flex-start;
-    max-width: 1400px;
-    margin: 0 auto;
-    gap: 40px;
 }
 
 .login-left {
     flex: 1;
-    max-width: 500px;
-    padding-top: 10px;
+    max-width: 450px;
 }
 
 .login-right {
@@ -32,48 +35,49 @@ body {
     max-width: 500px;
     display: flex;
     flex-direction: column;
-    gap: 30px;
-    padding-top: 20px;
+    justify-content: center;
+    align-items: center;
+    gap: 25px;
 }
 
 /* ===== TITLE ===== */
-.login-container h1 {
+.login-left h1 {
     font-size: 42px;
     font-weight: bold;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
     margin-top: 0;
-    color: white;
-    text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+    color: #2C3E50;
     text-align: left;
 }
 
-.login-container h2 {
-    font-size: 24px;
-    margin-bottom: 30px;
+.login-left h2 {
+    font-size: 22px;
+    margin-bottom: 25px;
     margin-top: 0;
-    color: rgba(255,255,255,0.9);
+    color: #5D6D7E;
     text-align: left;
+    font-weight: 500;
 }
 
 /* ===== ACCOUNT TYPE BUTTONS ===== */
 .account-choice {
     display: flex;
     flex-direction: column;
-    gap: 15px;
-    margin-bottom: 30px;
+    gap: 12px;
+    margin-bottom: 20px;
     align-items: flex-start;
 }
 
 .account-choice button {
-    padding: 20px 40px;
-    font-size: 20px;
+    padding: 16px 32px;
+    font-size: 18px;
     cursor: pointer;
     border: none;
-    border-radius: 15px;
+    border-radius: 8px;
     background: white;
     color: #667eea;
-    transition: all 0.3s;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    transition: all 0.2s;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     font-weight: 600;
     width: 100%;
     max-width: 300px;
@@ -81,37 +85,34 @@ body {
 }
 
 .account-choice button:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     background: #f8f9fa;
 }
 
 .account-choice button:active {
-    transform: translateY(-1px);
+    transform: translateY(0);
 }
 
 /* ===== LOGIN FORM ===== */
 #loginForm {
-    margin-top: 30px;
-    z-index: 2000;
-    background: white;
-    padding: 40px;
-    border-radius: 15px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-    min-width: 300px;
+    margin-top: 0;
+    width: 100%;
+    max-width: 300px;
 }
 
 #loginForm input {
     display: block;
-    margin: 15px auto;
-    padding: 15px 20px;
+    margin: 0 0 12px 0;
+    padding: 16px 20px;
     font-size: 16px;
     width: 100%;
-    max-width: 280px;
+    max-width: 300px;
     border-radius: 8px;
     border: 2px solid #e0e0e0;
-    transition: border-color 0.3s;
+    transition: border-color 0.2s;
     box-sizing: border-box;
+    background: white;
 }
 
 #loginForm input:focus {
@@ -119,33 +120,34 @@ body {
     border-color: #667eea;
 }
 
-#loginForm button {
-    padding: 15px 30px;
-    margin: 10px 5px;
+.login-form-buttons {
+    display: flex;
+    gap: 10px;
+    margin-top: 12px;
+    width: 100%;
+    max-width: 300px;
+}
+
+.login-form-buttons button {
+    flex: 1;
+    padding: 16px 24px;
     font-size: 16px;
     border-radius: 8px;
     border: none;
     background: #667eea;
     color: white;
     cursor: pointer;
-    transition: all 0.3s;
+    transition: all 0.2s;
     font-weight: 600;
-    min-width: 120px;
 }
 
-/* Center buttons in login form */
-#loginForm > div {
-    text-align: center;
-    margin-top: 20px;
-}
-
-#loginForm button:hover {
+.login-form-buttons button:hover {
     background: #5568d3;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    transform: translateY(-1px);
+    box-shadow: 0 3px 8px rgba(0,0,0,0.15);
 }
 
-#loginForm button:active {
+.login-form-buttons button:active {
     transform: translateY(0);
 }
 
@@ -155,6 +157,7 @@ body {
     max-width: 500px;
     height: 350px;
     overflow: hidden;
+    border-radius: 8px;
 }
 
 .photo-rotator img {
@@ -175,34 +178,34 @@ body {
 .quote-rotator p {
     font-size: 18px;
     font-style: italic;
-    color: white;
-    margin: 20px 0 15px 0;
+    color: #2C3E50;
+    margin: 0 0 15px 0;
     min-height: 60px;
     display: flex;
     align-items: center;
     justify-content: center;
     transition: opacity 0.5s ease-in-out;
     opacity: 1;
-    text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+    line-height: 1.5;
 }
 
 .quote-dots {
     display: flex;
     justify-content: center;
-    gap: 10px;
-    margin-top: 10px;
+    gap: 8px;
+    margin-top: 0;
 }
 
 .dot {
-    width: 10px;
-    height: 10px;
+    width: 8px;
+    height: 8px;
     border-radius: 50%;
-    background: rgba(255,255,255,0.5);
+    background: #D4C4A8;
     transition: all 0.3s;
 }
 
 .dot.active {
-    background: rgba(255,255,255,0.9);
+    background: #8B6F47;
 }
 
 /* ===== RESPONSIVE ===== */
@@ -210,6 +213,7 @@ body {
     .login-container {
         flex-direction: column;
         align-items: center;
+        gap: 40px;
     }
     
     .login-left,
@@ -218,8 +222,8 @@ body {
         width: 100%;
     }
     
-    .login-container h1,
-    .login-container h2 {
+    .login-left h1,
+    .login-left h2 {
         text-align: center;
     }
     
@@ -229,6 +233,14 @@ body {
     
     .account-choice button {
         text-align: center;
+    }
+    
+    #loginForm {
+        max-width: 100%;
+    }
+    
+    .login-form-buttons {
+        max-width: 100%;
     }
 }
 
