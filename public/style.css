@@ -71,6 +71,44 @@ body {
     font-weight: 500;
 }
 
+/* ===== ROLE SELECTION BUTTONS ===== */
+.role-selection-buttons {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 25px;
+    align-items: flex-start;
+}
+
+.role-btn {
+    flex: 1;
+    padding: 14px 20px;
+    font-size: 16px;
+    cursor: pointer;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    background: white;
+    color: #5D6D7E;
+    transition: all 0.2s;
+    font-weight: 600;
+    text-align: center;
+}
+
+.role-btn:hover {
+    background: #f8f9fa;
+    border-color: #667eea;
+}
+
+.role-btn-active {
+    background: #667eea;
+    color: white;
+    border-color: #667eea;
+}
+
+.role-btn-active:hover {
+    background: #5568d3;
+    border-color: #5568d3;
+}
+
 /* ===== ACCOUNT TYPE BUTTONS ===== */
 .account-choice {
     display: flex;

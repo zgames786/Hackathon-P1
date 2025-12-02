@@ -129,10 +129,32 @@ async function loadAdminUIDs() {
 }
 
 // ======= LOGIN & ACCOUNT =======
+let selectedRole = null; // Store selected role globally
+
+function selectRole(role) {
+    selectedRole = role;
+    userType = role;
+    
+    // Update button styles
+    document.querySelectorAll(".role-btn").forEach(btn => {
+        btn.classList.remove("role-btn-active");
+    });
+    
+    const activeBtn = document.getElementById("roleBtn" + role.charAt(0).toUpperCase() + role.slice(1));
+    if (activeBtn) {
+        activeBtn.classList.add("role-btn-active");
+    }
+    
+    // Show/hide "Create Admin Account" link
+    const createAdminLink = document.getElementById("createAdminLink");
+    if (createAdminLink) {
+        createAdminLink.style.display = (role === "admin") ? "block" : "none";
+    }
+}
+
 function selectType(type) {
-    // Legacy function kept for compatibility
-    // Now handled by role dropdown
-    userType = type;
+    // Legacy function - redirect to selectRole
+    selectRole(type);
 }
 
 // ======= LOGIN ATTEMPT TRACKING =======
@@ -191,11 +213,13 @@ async function login() {
         return;
     }
     
-    // Get role from dropdown
-    const roleSelect = document.getElementById("roleSelect");
-    if (roleSelect) {
-        userType = roleSelect.value;
+    // Check if role is selected
+    if (!selectedRole) {
+        showError("Please select a role first");
+        return;
     }
+    
+    userType = selectedRole;
     
     let u = document.getElementById("username").value.trim();
     let p = document.getElementById("password").value;
@@ -224,7 +248,7 @@ async function login() {
         return;
     }
     
-    // Teacher/Student login - use Firestore accounts
+    // Teacher/Student login - use Firestore accounts with plain password
     try {
         if (!window.db) {
             showError("Database not initialized. Please refresh the page.");
@@ -239,6 +263,7 @@ async function login() {
             .get();
         
         if (usersSnapshot.empty) {
+            showError("Invalid username or password");
             recordFailedAttempt();
             return;
         }
@@ -247,15 +272,14 @@ async function login() {
         const userDoc = usersSnapshot.docs[0];
         const userData = userDoc.data();
         
-        // Verify password
-        if (!userData.passwordHash) {
-            showError("Account data is corrupted. Please contact administrator.");
+        // Verify password (plain text comparison)
+        if (!userData.password) {
+            showError("Invalid username or password");
+            recordFailedAttempt();
             return;
         }
         
-        const passwordMatches = await window.verifyPassword(p, userData.passwordHash);
-        
-        if (passwordMatches) {
+        if (userData.password === p) {
             clearLoginAttempts();
             loggedInUser = u;
             
@@ -275,8 +299,14 @@ async function login() {
             localStorage.setItem("loggedInUser", userType + "_" + u);
             localStorage.setItem("userType", userType);
             
-            window.location.href = "home.html";
+            // Redirect based on role
+            if (userType === "teacher") {
+                window.location.href = "home.html";
+            } else if (userType === "student") {
+                window.location.href = "home.html";
+            }
         } else {
+            showError("Invalid username or password");
             recordFailedAttempt();
         }
     } catch (error) {

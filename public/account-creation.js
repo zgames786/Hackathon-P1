@@ -170,20 +170,16 @@ async function createUserAccount() {
             .get();
         
         if (!existingUsersSnapshot.empty) {
-            showCreateError("Username already exists. Please choose a different username.");
+            showCreateError("Username already taken");
             return;
         }
         
-        // Hash the password
-        const passwordHash = await window.hashPassword(password);
-        
-        // Create user document
+        // Create user document with plain password
         const userData = {
             username: username,
             role: currentAccountType,
-            passwordHash: passwordHash,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            password: password, // Store plain password
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
         };
         
         // Add optional fields
@@ -212,8 +208,8 @@ async function createUserAccount() {
         }, 2000);
         
     } catch (error) {
-        console.error("Error creating account:", error);
-        showCreateError("Error creating account: " + error.message);
+        console.error("Error creating user", error);
+        showCreateError("Error creating account. Please try again.");
     }
 }
 

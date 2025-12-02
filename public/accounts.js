@@ -101,6 +101,24 @@ function displayAccounts(accounts) {
             }
         }
         
+        // Show password (plain text)
+        const passwordDisplay = account.password ? `<p><strong>Password:</strong> ${account.password}</p>` : "";
+        
+        // Show student-specific fields
+        let studentFields = "";
+        if (account.role === "student") {
+            if (account.className) studentFields += `<p><strong>Class:</strong> ${account.className}</p>`;
+            if (account.section) studentFields += `<p><strong>Section:</strong> ${account.section}</p>`;
+            if (account.admissionNumber) studentFields += `<p><strong>Admission Number:</strong> ${account.admissionNumber}</p>`;
+            if (account.parentPhone) studentFields += `<p><strong>Parent Phone:</strong> ${account.parentPhone}</p>`;
+        }
+        
+        // Show teacher-specific fields
+        let teacherFields = "";
+        if (account.role === "teacher") {
+            if (account.employeeId) teacherFields += `<p><strong>Employee ID:</strong> ${account.employeeId}</p>`;
+        }
+        
         card.innerHTML = `
             <div class="account-card-header">
                 <div>
@@ -110,8 +128,10 @@ function displayAccounts(accounts) {
             </div>
             <div class="account-card-body">
                 ${account.fullName ? `<p><strong>Full Name:</strong> ${account.fullName}</p>` : ""}
-                ${additionalInfo}
+                ${studentFields}
+                ${teacherFields}
                 ${account.phone ? `<p><strong>Phone:</strong> ${account.phone}</p>` : ""}
+                ${passwordDisplay}
                 <p><strong>Created:</strong> ${createdDate}</p>
             </div>
             <div class="account-card-footer">
@@ -197,6 +217,11 @@ async function openEditForm(accountId) {
         document.getElementById("editEmployeeId").value = account.employeeId || "";
     }
     
+    // Clear password fields (for security, don't show current password)
+    document.getElementById("editPassword").value = "";
+    document.getElementById("editConfirmPassword").value = "";
+    document.getElementById("editPasswordMatchError").style.display = "none";
+    
     // Reset messages
     document.getElementById("editAccountError").style.display = "none";
     document.getElementById("editAccountSuccess").style.display = "none";
@@ -245,10 +270,22 @@ async function updateUserAccount() {
     // Get form values
     const fullName = document.getElementById("editFullName").value.trim();
     const phone = document.getElementById("editPhone").value.trim();
+    const password = document.getElementById("editPassword").value;
+    const confirmPassword = document.getElementById("editConfirmPassword").value;
     
     // Hide previous messages
     document.getElementById("editAccountError").style.display = "none";
     document.getElementById("editAccountSuccess").style.display = "none";
+    document.getElementById("editPasswordMatchError").style.display = "none";
+    
+    // Check password if provided
+    if (password || confirmPassword) {
+        if (password !== confirmPassword) {
+            document.getElementById("editPasswordMatchError").style.display = "block";
+            showEditError("Passwords do not match.");
+            return;
+        }
+    }
     
     try {
         if (!window.db) {
@@ -256,13 +293,16 @@ async function updateUserAccount() {
             return;
         }
         
-        // Build update data
-        const updateData = {
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        };
+        // Build update data (do not overwrite createdAt)
+        const updateData = {};
         
         if (fullName) updateData.fullName = fullName;
         if (phone) updateData.phone = phone;
+        
+        // Update password if provided
+        if (password) {
+            updateData.password = password;
+        }
         
         // Add role-specific fields
         if (account.role === "student") {
@@ -271,13 +311,13 @@ async function updateUserAccount() {
             const admissionNumber = document.getElementById("editAdmissionNumber").value.trim();
             const parentPhone = document.getElementById("editParentPhone").value.trim();
             
-            if (className) updateData.className = className;
-            if (section) updateData.section = section;
-            if (admissionNumber) updateData.admissionNumber = admissionNumber;
-            if (parentPhone) updateData.parentPhone = parentPhone;
+            if (className !== undefined) updateData.className = className || null;
+            if (section !== undefined) updateData.section = section || null;
+            if (admissionNumber !== undefined) updateData.admissionNumber = admissionNumber || null;
+            if (parentPhone !== undefined) updateData.parentPhone = parentPhone || null;
         } else if (account.role === "teacher") {
             const employeeId = document.getElementById("editEmployeeId").value.trim();
-            if (employeeId) updateData.employeeId = employeeId;
+            if (employeeId !== undefined) updateData.employeeId = employeeId || null;
         }
         
         // Update in Firestore
@@ -420,4 +460,29 @@ async function resetUserPassword() {
         showResetError("Error resetting password: " + error.message);
     }
 }
+
+// Add password validation event listeners for edit form
+document.addEventListener("DOMContentLoaded", function() {
+    const editPassword = document.getElementById("editPassword");
+    const editConfirmPassword = document.getElementById("editConfirmPassword");
+    const editPasswordMatchError = document.getElementById("editPasswordMatchError");
+    
+    if (editPassword && editConfirmPassword && editPasswordMatchError) {
+        editPassword.addEventListener("input", function() {
+            if (editPassword.value && editConfirmPassword.value && editPassword.value !== editConfirmPassword.value) {
+                editPasswordMatchError.style.display = "block";
+            } else {
+                editPasswordMatchError.style.display = "none";
+            }
+        });
+        
+        editConfirmPassword.addEventListener("input", function() {
+            if (editPassword.value && editConfirmPassword.value && editPassword.value !== editConfirmPassword.value) {
+                editPasswordMatchError.style.display = "block";
+            } else {
+                editPasswordMatchError.style.display = "none";
+            }
+        });
+    }
+});
 
