@@ -359,28 +359,6 @@ window.showAdminTab = function(tab) {
     }
 };
 
-// Setup sidebar buttons
-function setupAdminSidebarButtons() {
-    const sidebar = document.getElementById("sidebar");
-    if (!sidebar) return;
-    
-    const buttons = sidebar.querySelectorAll("button");
-    buttons.forEach(button => {
-        const onclick = button.getAttribute("onclick");
-        if (onclick && onclick.includes("showTab")) {
-            const match = onclick.match(/showTab\(['"]([^'"]+)['"]\)/);
-            if (match && match[1]) {
-                const tabName = match[1];
-                button.addEventListener("click", function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    window.showAdminTab(tabName);
-                });
-            }
-        }
-    });
-}
-
 // Initialize admin page
 window.onload = async function() {
     if (window.location.pathname.includes("admin.html")) {
@@ -395,9 +373,6 @@ window.onload = async function() {
         if (document.getElementById("userNameDisplay")) {
             document.getElementById("userNameDisplay").innerText = displayName;
         }
-        
-        // Setup sidebar
-        setupAdminSidebarButtons();
         
         // Check for tab parameter in URL
         const urlParams = new URLSearchParams(window.location.search);
