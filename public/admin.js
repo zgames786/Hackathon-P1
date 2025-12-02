@@ -399,8 +399,16 @@ window.onload = async function() {
         // Setup sidebar
         setupAdminSidebarButtons();
         
-        // Load admin data
-        loadAdminData();
+        // Check for tab parameter in URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const tabParam = urlParams.get('tab');
+        if (tabParam) {
+            // Show the specified tab
+            showAdminTab(tabParam);
+        } else {
+            // Default to dashboard
+            loadAdminData();
+        }
         
         // Set up auto-refresh every 30 seconds
         setInterval(loadAdminData, 30000);
