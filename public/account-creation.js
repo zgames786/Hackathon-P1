@@ -2,6 +2,23 @@
 // All user accounts (students and teachers) are written to Firestore "users" collection
 // Using Firebase v8 compat SDK via window.db (set by firebase-init.js)
 // Collection: "users" (top-level, not nested under admins)
+
+// Helper functions to match modular SDK syntax: addDoc(collection(db, "users"), userData)
+// These wrap the compat SDK methods for consistency
+function collection(db, collectionName) {
+    if (!db) {
+        throw new Error("Database instance is not defined");
+    }
+    return db.collection(collectionName);
+}
+
+async function addDoc(collectionRef, data) {
+    if (!collectionRef || typeof collectionRef.add !== 'function') {
+        throw new Error("Invalid collection reference");
+    }
+    return await collectionRef.add(data);
+}
+
 let currentAccountType = "";
 let isSubmitting = false; // Prevent double submission
 
@@ -193,14 +210,15 @@ async function createUserAccount() {
         return;
     }
     
+    // Ensure window.db is loaded from firebase-init.js before proceeding
+    if (!window.db) {
+        console.error("Error: window.db is not defined. firebase-init.js must load before account-creation.js");
+        showCreateError("Database not initialized. Please refresh the page.");
+        isSubmitting = false;
+        return;
+    }
+    
     try {
-        if (!window.db) {
-            console.error("Firestore db not available:", window.db);
-            showCreateError("Database not initialized. Please refresh the page.");
-            isSubmitting = false;
-            return;
-        }
-        
         // Verify admin is authenticated
         const adminUID = localStorage.getItem("adminUID");
         if (!adminUID) {
@@ -211,7 +229,7 @@ async function createUserAccount() {
             return;
         }
         
-        // Check if Firebase Auth user exists
+        // Check if Firebase Auth user exists (for Firestore rules)
         if (window.auth && window.auth.currentUser) {
             console.log("Current Firebase Auth user:", window.auth.currentUser.uid);
         } else {
@@ -234,32 +252,36 @@ async function createUserAccount() {
         
         console.log("Username is available. Creating user document in users collection...");
         
-        // Create user document with plain password - write to users collection only
+        // Ensure window.db is loaded from firebase-init.js
+        if (!window.db) {
+            console.error("Error: window.db is not defined. firebase-init.js may not have loaded.");
+            showCreateError("Database not initialized. Please refresh the page.");
+            isSubmitting = false;
+            return;
+        }
+        
+        // Create plain JSON userData object with only required fields
+        // No nested objects, no undefined fields
         const userData = {
             username: username,
+            password: password,
             role: currentAccountType,
-            password: password, // Store plain password
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
         };
         
-        // Add optional fields (only if not empty)
-        if (fullName && fullName.trim()) userData.fullName = fullName.trim();
-        if (phone && phone.trim()) userData.phone = phone.trim();
+        // Remove any undefined values to ensure clean JSON
+        Object.keys(userData).forEach(key => {
+            if (userData[key] === undefined) {
+                delete userData[key];
+            }
+        });
         
-        // Add role-specific fields
-        if (currentAccountType === "student") {
-            if (className && className.trim()) userData.className = className.trim();
-            if (section && section.trim()) userData.section = section.trim();
-            if (admissionNumber && admissionNumber.trim()) userData.admissionNumber = admissionNumber.trim();
-            if (parentPhone && parentPhone.trim()) userData.parentPhone = parentPhone.trim();
-        } else if (currentAccountType === "teacher") {
-            if (employeeId && employeeId.trim()) userData.employeeId = employeeId.trim();
-        }
+        console.log("User data to save (plain JSON):", { ...userData, password: "***" }); // Don't log password
         
-        console.log("User data to save to users collection:", { ...userData, password: "***" }); // Don't log password
-        
-        // Write to Firestore users collection - top level only, not nested
-        const docRef = await window.db.collection("users").add(userData);
+        // Write to Firestore users collection using modular SDK syntax
+        // addDoc(collection(window.db, "users"), userData)
+        const usersCollectionRef = collection(window.db, "users");
+        const docRef = await addDoc(usersCollectionRef, userData);
         
         console.log("User created successfully in users collection with ID:", docRef.id);
         
@@ -273,10 +295,12 @@ async function createUserAccount() {
         }, 2000);
         
     } catch (error) {
-        console.error("Error creating user - Full error details:", error);
+        // Log all error details to console for debugging
+        console.error("Firestore write error:", error);
         console.error("Error code:", error.code);
         console.error("Error message:", error.message);
         console.error("Error stack:", error.stack);
+        console.error("Full error object:", JSON.stringify(error, null, 2));
         
         // Show more specific error message if available
         let errorMessage = "Error creating account. Please try again.";
