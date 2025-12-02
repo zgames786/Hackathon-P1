@@ -1,4 +1,7 @@
 // ======= ACCOUNT CREATION =======
+// All user accounts (students and teachers) are written to Firestore "users" collection
+// Using Firebase v8 compat SDK via window.db (set by firebase-init.js)
+// Collection: "users" (top-level, not nested under admins)
 let currentAccountType = "";
 let isSubmitting = false; // Prevent double submission
 
@@ -217,7 +220,7 @@ async function createUserAccount() {
         
         console.log("Checking username uniqueness for:", username);
         
-        // Check if username already exists
+        // Check if username already exists in users collection
         const existingUsersSnapshot = await window.db.collection("users")
             .where("username", "==", username)
             .limit(1)
@@ -229,9 +232,9 @@ async function createUserAccount() {
             return;
         }
         
-        console.log("Username is available. Creating user document...");
+        console.log("Username is available. Creating user document in users collection...");
         
-        // Create user document with plain password
+        // Create user document with plain password - write to users collection only
         const userData = {
             username: username,
             role: currentAccountType,
@@ -253,12 +256,12 @@ async function createUserAccount() {
             if (employeeId && employeeId.trim()) userData.employeeId = employeeId.trim();
         }
         
-        console.log("User data to save:", { ...userData, password: "***" }); // Don't log password
+        console.log("User data to save to users collection:", { ...userData, password: "***" }); // Don't log password
         
-        // Add to Firestore
+        // Write to Firestore users collection - top level only, not nested
         const docRef = await window.db.collection("users").add(userData);
         
-        console.log("User created successfully with ID:", docRef.id);
+        console.log("User created successfully in users collection with ID:", docRef.id);
         
         showCreateSuccess(`${currentAccountType.charAt(0).toUpperCase() + currentAccountType.slice(1)} account created successfully! Username: ${username}`);
         

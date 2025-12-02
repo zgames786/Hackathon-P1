@@ -13,4 +13,9 @@ const firebaseConfig = {
     window.auth = firebase.auth();
     window.db = firebase.firestore();
     
+    // Export db for ES6 modules if needed
+    if (typeof module !== 'undefined' && module.exports) {
+        module.exports = { db: window.db };
+    }
+    
     console.log("Firebase initialized");
