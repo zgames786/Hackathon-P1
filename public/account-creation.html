@@ -11,12 +11,11 @@
 <div id="hamburger" onclick="toggleSidebar()">☰</div>
 
 <div id="sidebar">
-  <button onclick="window.location.href='admin.html'">🏠 Dashboard</button>
-  <button onclick="window.location.href='fees.html'">💰 Fees</button>
-  <button onclick="window.location.href='attendance.html'">✅ Attendance</button>
-  <button onclick="window.location.href='management.html'">👨‍💼 Admin</button>
-  <button onclick="window.location.href='account-creation.html'">➕ Account Creation</button>
-  <button onclick="window.location.href='accounts.html'">👥 Accounts</button>
+  <button onclick="navigateTo('admin.html')">🏠 Dashboard</button>
+  <button onclick="navigateTo('fees.html')">💰 Fees</button>
+  <button onclick="navigateTo('attendance.html')">✅ Attendance</button>
+  <button onclick="navigateTo('account-creation.html')">➕ Account Creation</button>
+  <button onclick="navigateTo('accounts.html')">👥 Accounts</button>
   <button onclick="logout()">🚪 Logout</button>
 </div>
 
@@ -109,6 +108,7 @@
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
 <script src="firebase-init.js"></script>
 <script src="app.js"></script>
+<script src="sidebar-nav.js"></script>
 <script src="account-creation.js"></script>
 </body>
 </html>

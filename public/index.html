@@ -64,5 +64,23 @@
 
 <script src="app.js"></script>
 <script src="login-rotator.js"></script>
+<script>
+// Ensure role buttons are initialized
+document.addEventListener('DOMContentLoaded', function() {
+    // Verify buttons exist (not dropdown)
+    const roleButtons = document.getElementById('roleButtons');
+    const dropdown = document.getElementById('roleSelect');
+    
+    // If dropdown exists, hide it (in case of cached version)
+    if (dropdown) {
+        dropdown.style.display = 'none';
+    }
+    
+    // Ensure role buttons are visible
+    if (roleButtons) {
+        roleButtons.style.display = 'flex';
+    }
+});
+</script>
 </body>
 </html>

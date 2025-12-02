@@ -1,5 +1,6 @@
 // ======= ACCOUNT CREATION =======
 let currentAccountType = "";
+let isSubmitting = false; // Prevent double submission
 
 // Check admin access on page load
 window.onload = async function() {
@@ -9,6 +10,26 @@ window.onload = async function() {
     if (userType !== "admin" || !adminUID) {
         window.location.href = "index.html";
         return;
+    }
+    
+    // Wait for Firebase to be ready
+    let firebaseReady = false;
+    let attempts = 0;
+    const maxAttempts = 10;
+    
+    while (!firebaseReady && attempts < maxAttempts) {
+        if (window.db && typeof window.db.collection === 'function') {
+            firebaseReady = true;
+            console.log("Firestore is ready");
+        } else {
+            attempts++;
+            await new Promise(resolve => setTimeout(resolve, 100));
+        }
+    }
+    
+    if (!firebaseReady) {
+        console.error("Firestore not ready after waiting");
+        alert("Firebase initialization failed. Please refresh the page.");
     }
 };
 
@@ -117,6 +138,14 @@ function showCreateSuccess(message) {
 }
 
 async function createUserAccount() {
+    // Prevent double submission
+    if (isSubmitting) {
+        console.log("Already submitting, ignoring duplicate request");
+        return;
+    }
+    
+    isSubmitting = true;
+    
     // Get form values
     const username = document.getElementById("newUsername").value.trim();
     const password = document.getElementById("newPassword").value;
@@ -137,16 +166,19 @@ async function createUserAccount() {
     // Validate required fields
     if (!username || !password || !confirmPassword) {
         showCreateError("Please fill in all required fields.");
+        isSubmitting = false;
         return;
     }
     
     if (username.length < 3) {
         showCreateError("Username must be at least 3 characters.");
+        isSubmitting = false;
         return;
     }
     
     if (password.length < 6) {
         showCreateError("Password must be at least 6 characters.");
+        isSubmitting = false;
         return;
     }
     
@@ -154,14 +186,36 @@ async function createUserAccount() {
     if (password !== confirmPassword) {
         document.getElementById("passwordMatchError").style.display = "block";
         showCreateError("Passwords do not match.");
+        isSubmitting = false;
         return;
     }
     
     try {
         if (!window.db) {
+            console.error("Firestore db not available:", window.db);
             showCreateError("Database not initialized. Please refresh the page.");
+            isSubmitting = false;
             return;
         }
+        
+        // Verify admin is authenticated
+        const adminUID = localStorage.getItem("adminUID");
+        if (!adminUID) {
+            console.error("Admin UID not found in localStorage");
+            showCreateError("Admin session expired. Please log in again.");
+            isSubmitting = false;
+            setTimeout(() => window.location.href = "index.html", 2000);
+            return;
+        }
+        
+        // Check if Firebase Auth user exists
+        if (window.auth && window.auth.currentUser) {
+            console.log("Current Firebase Auth user:", window.auth.currentUser.uid);
+        } else {
+            console.warn("No Firebase Auth user found. Firestore rules may block writes.");
+        }
+        
+        console.log("Checking username uniqueness for:", username);
         
         // Check if username already exists
         const existingUsersSnapshot = await window.db.collection("users")
@@ -171,8 +225,11 @@ async function createUserAccount() {
         
         if (!existingUsersSnapshot.empty) {
             showCreateError("Username already taken");
+            isSubmitting = false;
             return;
         }
+        
+        console.log("Username is available. Creating user document...");
         
         // Create user document with plain password
         const userData = {
@@ -182,22 +239,26 @@ async function createUserAccount() {
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
         };
         
-        // Add optional fields
-        if (fullName) userData.fullName = fullName;
-        if (phone) userData.phone = phone;
+        // Add optional fields (only if not empty)
+        if (fullName && fullName.trim()) userData.fullName = fullName.trim();
+        if (phone && phone.trim()) userData.phone = phone.trim();
         
         // Add role-specific fields
         if (currentAccountType === "student") {
-            if (className) userData.className = className;
-            if (section) userData.section = section;
-            if (admissionNumber) userData.admissionNumber = admissionNumber;
-            if (parentPhone) userData.parentPhone = parentPhone;
+            if (className && className.trim()) userData.className = className.trim();
+            if (section && section.trim()) userData.section = section.trim();
+            if (admissionNumber && admissionNumber.trim()) userData.admissionNumber = admissionNumber.trim();
+            if (parentPhone && parentPhone.trim()) userData.parentPhone = parentPhone.trim();
         } else if (currentAccountType === "teacher") {
-            if (employeeId) userData.employeeId = employeeId;
+            if (employeeId && employeeId.trim()) userData.employeeId = employeeId.trim();
         }
+        
+        console.log("User data to save:", { ...userData, password: "***" }); // Don't log password
         
         // Add to Firestore
         const docRef = await window.db.collection("users").add(userData);
+        
+        console.log("User created successfully with ID:", docRef.id);
         
         showCreateSuccess(`${currentAccountType.charAt(0).toUpperCase() + currentAccountType.slice(1)} account created successfully! Username: ${username}`);
         
@@ -205,11 +266,27 @@ async function createUserAccount() {
         setTimeout(() => {
             document.getElementById("createAccountForm").reset();
             document.getElementById("createAccountSuccess").style.display = "none";
+            isSubmitting = false; // Reset flag after success
         }, 2000);
         
     } catch (error) {
-        console.error("Error creating user", error);
-        showCreateError("Error creating account. Please try again.");
+        console.error("Error creating user - Full error details:", error);
+        console.error("Error code:", error.code);
+        console.error("Error message:", error.message);
+        console.error("Error stack:", error.stack);
+        
+        // Show more specific error message if available
+        let errorMessage = "Error creating account. Please try again.";
+        if (error.code === "permission-denied") {
+            errorMessage = "Permission denied. Make sure you're logged in as admin and Firestore rules allow writes.";
+        } else if (error.code === "unavailable") {
+            errorMessage = "Firestore is unavailable. Please check your internet connection and try again.";
+        } else if (error.message) {
+            errorMessage = `Error: ${error.message}`;
+        }
+        
+        showCreateError(errorMessage);
+        isSubmitting = false; // Reset flag on error
     }
 }
 
