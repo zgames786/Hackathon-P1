@@ -20,20 +20,19 @@
         <img src="images/tnha-logo.png" id="tnha-logo" alt="TNHA Logo">
         <h1 id="main-title">TNHA School App</h1>
       </div>
-      <h2>Select Account Type</h2>
-      <div class="account-choice">
-        <button onclick="selectType('student')">Student 📚</button>
-        <button onclick="selectType('teacher')">Teacher ✏️</button>
-        <button onclick="selectType('admin')">Admin 👨‍💼</button>
-      </div>
+      <h2>Login</h2>
 
-      <div id="loginForm" style="display:none;">
+      <div id="loginForm">
+        <label for="roleSelect" style="display: block; margin-bottom: 8px; color: #5D6D7E; font-weight: 500; font-size: 14px;">Select Role</label>
+        <select id="roleSelect" style="display: block; margin: 0 0 12px 0; padding: 16px 20px; font-size: 16px; width: 100%; max-width: 300px; border-radius: 8px; border: 2px solid #e0e0e0; transition: border-color 0.2s; box-sizing: border-box; background: white; cursor: pointer;">
+          <option value="student">Student 📚</option>
+          <option value="teacher">Teacher ✏️</option>
+          <option value="admin">Admin 👨‍💼</option>
+        </select>
         <input type="text" id="username" placeholder="Username" autocomplete="username">
         <input type="password" id="password" placeholder="Password" autocomplete="current-password">
-        <input type="text" id="masterUID" placeholder="Master UID (Admin only)" autocomplete="off" style="display:none;">
         <div class="login-form-buttons">
           <button onclick="login()">Login</button>
-          <button id="createAccountBtn" onclick="createAccount()">Create Account</button>
         </div>
         <div id="createAdminLink" style="text-align: center; margin-top: 15px; display:none;">
           <a href="admin-create.html" style="color: #667eea; text-decoration: none; font-size: 14px;">Create Admin Account</a>
@@ -63,6 +62,7 @@
   <p>© 2025 The New Heights Academy Kairana. Learn Today to Lead Tomorrow. Contact: <a href="mailto:tnha.school">tnha.school</a></p>
 </footer>
 
+<script src="password-utils.js"></script>
 <script src="app.js"></script>
 <script src="login-rotator.js"></script>
 </body>

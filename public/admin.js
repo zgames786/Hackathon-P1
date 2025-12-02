@@ -121,44 +121,75 @@ async function updateAdminDashboard() {
     // Render charts
     renderDashboardCharts();
     
-    // Update classes list
+    // Update classes list with data from Firestore
     const classesList = document.getElementById("classesList");
     if (classesList) {
         if (adminData.classes.length === 0) {
             classesList.innerHTML = "<p style='text-align: center; color: #666; padding: 20px;'>No classes found.</p>";
         } else {
             let html = "";
-            adminData.classes.forEach(classDoc => {
+            
+            for (const classDoc of adminData.classes) {
                 const className = classDoc.className || classDoc.name || "Unnamed Class";
-                const teacherUID = classDoc.teacherUID || classDoc.teacher || "";
+                const teacherUid = classDoc.teacherUid || classDoc.teacherUID || classDoc.teacher || "";
+                const studentUids = classDoc.studentUids || classDoc.studentUIDs || [];
+                const doneCount = classDoc.doneCount || 0;
+                const assignedCount = classDoc.assignedCount || 0;
+                const missingCount = classDoc.missingCount || 0;
                 
-                // Find teacher name
-                const teacher = adminData.teachers.find(t => t.uid === teacherUID || t.id === teacherUID);
-                const teacherName = teacher ? (teacher.name || teacher.email || teacherUID) : "No Teacher";
-                
-                // Count students in this class
-                let studentCount = 0;
-                if (classDoc.studentUIDs && Array.isArray(classDoc.studentUIDs)) {
-                    studentCount = classDoc.studentUIDs.length;
-                } else if (classDoc.studentCount !== undefined) {
-                    studentCount = classDoc.studentCount;
-                } else {
-                    studentCount = adminData.students.filter(student => {
-                        const studentClasses = student.classes || [];
-                        return studentClasses.includes(classDoc.id) || studentClasses.includes(className);
-                    }).length;
+                // Find teacher name from users collection
+                let teacherName = "No Teacher";
+                if (teacherUid) {
+                    try {
+                        const teacherDoc = await window.db.collection("users")
+                            .where("role", "==", "teacher")
+                            .where(firebase.firestore.FieldPath.documentId(), "==", teacherUid)
+                            .limit(1)
+                            .get();
+                        
+                        if (!teacherDoc.empty) {
+                            const teacherData = teacherDoc.docs[0].data();
+                            teacherName = teacherData.fullName || teacherData.username || "Unknown";
+                        }
+                    } catch (e) {
+                        console.error("Error fetching teacher:", e);
+                    }
                 }
+                
+                // Get student names
+                let studentNames = [];
+                if (studentUids && studentUids.length > 0) {
+                    try {
+                        const studentsSnapshot = await window.db.collection("users")
+                            .where("role", "==", "student")
+                            .get();
+                        
+                        studentsSnapshot.forEach(doc => {
+                            if (studentUids.includes(doc.id)) {
+                                const studentData = doc.data();
+                                studentNames.push(studentData.fullName || studentData.username || "Unknown");
+                            }
+                        });
+                    } catch (e) {
+                        console.error("Error fetching students:", e);
+                    }
+                }
+                
+                const totalTasks = assignedCount + missingCount;
+                const progressPercent = totalTasks > 0 ? Math.round((doneCount / totalTasks) * 100) : 0;
                 
                 html += `
                     <div class="admin-class-item">
                         <h4>${className}</h4>
                         <div class="class-stats">
                             <p><strong>Teacher:</strong> ${teacherName}</p>
-                            <p><strong>Students:</strong> ${studentCount}</p>
+                            <p><strong>Students:</strong> ${studentNames.length > 0 ? studentNames.join(", ") : "No students enrolled"}</p>
+                            <p><strong>Progress:</strong> ${doneCount} of ${totalTasks} completed (${progressPercent}%)</p>
+                            ${totalTasks > 0 ? `<div class="progress-bar"><div class="progress-fill" style="width: ${progressPercent}%; background: #667eea; height: 8px; border-radius: 4px;"></div></div>` : ""}
                         </div>
                     </div>
                 `;
-            });
+            }
             classesList.innerHTML = html;
         }
     }

@@ -130,58 +130,9 @@ async function loadAdminUIDs() {
 
 // ======= LOGIN & ACCOUNT =======
 function selectType(type) {
+    // Legacy function kept for compatibility
+    // Now handled by role dropdown
     userType = type;
-    document.getElementById("loginForm").style.display = "block";
-    document.querySelectorAll(".account-choice button").forEach(btn => {
-        btn.style.opacity = btn.textContent.toLowerCase().includes(type) ? "1" : "0.5";
-    });
-    // Hide create account button for admin
-    const createBtn = document.getElementById("createAccountBtn");
-    if (createBtn) {
-        createBtn.style.display = (type === "admin") ? "none" : "block";
-    }
-    // Show/hide master UID input for admin (temporarily hidden)
-    const masterUIDInput = document.getElementById("masterUID");
-    if (masterUIDInput) {
-        masterUIDInput.style.display = "none"; // Temporarily disabled
-        masterUIDInput.required = false;
-    }
-    // Show/hide "Create Admin Account" link - only for admin
-    const createAdminLink = document.getElementById("createAdminLink");
-    if (createAdminLink) {
-        createAdminLink.style.display = (type === "admin") ? "block" : "none";
-    }
-    // Change placeholder for admin
-    const usernameInput = document.getElementById("username");
-    if (usernameInput) {
-        usernameInput.placeholder = "Username";
-    }
-}
-
-function createAccount() {
-    let u = document.getElementById("username").value.trim();
-    let p = document.getElementById("password").value;
-    if (!u || !p) {
-        showError("Please enter both username and password");
-        return;
-    }
-    if (u.length < 3) {
-        showError("Username must be at least 3 characters");
-        return;
-    }
-    if (p.length < 4) {
-        showError("Password must be at least 4 characters");
-        return;
-    }
-    if (!usersDB[userType][u]) {
-        usersDB[userType][u] = {password: p, classes: []};
-        saveData();
-        showSuccess("Account created successfully! Please login.");
-        document.getElementById("username").value = "";
-        document.getElementById("password").value = "";
-    } else {
-        showError("Username already exists!");
-    }
 }
 
 // ======= LOGIN ATTEMPT TRACKING =======
@@ -234,10 +185,16 @@ function clearLoginAttempts() {
     localStorage.removeItem("loginBlock");
 }
 
-function login() {
+async function login() {
     // Check if login is blocked
     if (checkLoginBlocked()) {
         return;
+    }
+    
+    // Get role from dropdown
+    const roleSelect = document.getElementById("roleSelect");
+    if (roleSelect) {
+        userType = roleSelect.value;
     }
     
     let u = document.getElementById("username").value.trim();
@@ -247,37 +204,84 @@ function login() {
         return;
     }
     
-    // Admin login - use Firebase Auth (master UID temporarily disabled)
+    // Admin login - use Firebase Auth
     if (userType === "admin") {
-        // Master UID check temporarily disabled
-        // Check if user exists in admins collection and authenticate with Firebase Auth
-        checkAdminAccess(u, p).then((isValid) => {
+        try {
+            const isValid = await checkAdminAccess(u, p);
             if (isValid) {
                 clearLoginAttempts();
                 loggedInUser = u;
                 localStorage.setItem("loggedInUser", userType + "_" + u);
                 localStorage.setItem("userType", userType);
-                // adminUID is set in checkAdminAccess function
                 window.location.href = "admin.html";
             } else {
                 recordFailedAttempt();
             }
-        }).catch((error) => {
+        } catch (error) {
             console.error("Admin login error:", error);
             recordFailedAttempt();
-        });
+        }
         return;
     }
     
-    // Regular student/teacher login
-    if (usersDB[userType][u] && usersDB[userType][u].password === p) {
-        clearLoginAttempts();
-        loggedInUser = u;
-        localStorage.setItem("loggedInUser", userType + "_" + u);
-        localStorage.setItem("userType", userType);
-        window.location.href = "home.html";
-    } else {
-        recordFailedAttempt();
+    // Teacher/Student login - use Firestore accounts
+    try {
+        if (!window.db) {
+            showError("Database not initialized. Please refresh the page.");
+            return;
+        }
+        
+        // Query users collection for matching username and role
+        const usersSnapshot = await window.db.collection("users")
+            .where("username", "==", u)
+            .where("role", "==", userType)
+            .limit(1)
+            .get();
+        
+        if (usersSnapshot.empty) {
+            recordFailedAttempt();
+            return;
+        }
+        
+        // Get the user document
+        const userDoc = usersSnapshot.docs[0];
+        const userData = userDoc.data();
+        
+        // Verify password
+        if (!userData.passwordHash) {
+            showError("Account data is corrupted. Please contact administrator.");
+            return;
+        }
+        
+        const passwordMatches = await window.verifyPassword(p, userData.passwordHash);
+        
+        if (passwordMatches) {
+            clearLoginAttempts();
+            loggedInUser = u;
+            
+            // Store user data in localStorage for the session
+            const userSession = {
+                uid: userDoc.id,
+                username: userData.username,
+                role: userData.role,
+                fullName: userData.fullName || "",
+                className: userData.className || "",
+                section: userData.section || "",
+                admissionNumber: userData.admissionNumber || "",
+                employeeId: userData.employeeId || ""
+            };
+            
+            localStorage.setItem("userSession", JSON.stringify(userSession));
+            localStorage.setItem("loggedInUser", userType + "_" + u);
+            localStorage.setItem("userType", userType);
+            
+            window.location.href = "home.html";
+        } else {
+            recordFailedAttempt();
+        }
+    } catch (error) {
+        console.error("Login error:", error);
+        showError("An error occurred during login. Please try again.");
     }
 }
 

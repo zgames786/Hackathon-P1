@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TNHA School App - Manage Accounts</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="hamburger" onclick="toggleSidebar()">☰</div>
+
+<div id="sidebar">
+  <button onclick="window.location.href='admin.html'">🏠 Dashboard</button>
+  <button onclick="window.location.href='fees.html'">💰 Fees</button>
+  <button onclick="window.location.href='attendance.html'">✅ Attendance</button>
+  <button onclick="window.location.href='management.html'">👨‍💼 Admin</button>
+  <button onclick="window.location.href='account-creation.html'">➕ Account Creation</button>
+  <button onclick="window.location.href='accounts.html'">👥 Accounts</button>
+  <button onclick="logout()">🚪 Logout</button>
+</div>
+
+<div class="header-title">Manage Accounts</div>
+<div class="header-subtitle">View and edit teacher and student accounts</div>
+
+<div id="accountsTab">
+  <div class="accounts-controls">
+    <div class="search-filter-bar">
+      <input type="text" id="searchInput" placeholder="Search by username or name..." class="search-input">
+      <select id="roleFilter" class="filter-select">
+        <option value="all">All Roles</option>
+        <option value="teacher">Teachers</option>
+        <option value="student">Students</option>
+      </select>
+      <button onclick="applyFilters()" class="btn-primary">Search</button>
+      <button onclick="clearFilters()" class="btn-secondary">Clear</button>
+    </div>
+  </div>
+
+  <div id="accountsContainer" class="accounts-grid"></div>
+
+  <!-- Edit Account Modal -->
+  <div id="editAccountModal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <span class="close" onclick="closeEditForm()">&times;</span>
+      <h2 id="editModalTitle">Edit Account</h2>
+      
+      <div id="editAccountError" class="error-message" style="display: none;"></div>
+      <div id="editAccountSuccess" class="success-message" style="display: none;"></div>
+      
+      <form id="editAccountForm" onsubmit="return false;">
+        <input type="hidden" id="editAccountId">
+        
+        <div class="form-group">
+          <label for="editUsername">Username</label>
+          <input type="text" id="editUsername" disabled style="background: #f0f0f0; cursor: not-allowed;">
+        </div>
+        
+        <div class="form-group">
+          <label for="editRole">Role</label>
+          <input type="text" id="editRole" disabled style="background: #f0f0f0; cursor: not-allowed;">
+        </div>
+        
+        <div class="form-group">
+          <label for="editFullName">Full Name</label>
+          <input type="text" id="editFullName" autocomplete="name">
+        </div>
+        
+        <div class="form-group" id="editClassNameGroup" style="display: none;">
+          <label for="editClassName">Class</label>
+          <input type="text" id="editClassName" autocomplete="off">
+        </div>
+        
+        <div class="form-group" id="editSectionGroup" style="display: none;">
+          <label for="editSection">Section</label>
+          <input type="text" id="editSection" autocomplete="off">
+        </div>
+        
+        <div class="form-group" id="editAdmissionNumberGroup" style="display: none;">
+          <label for="editAdmissionNumber">Admission Number</label>
+          <input type="text" id="editAdmissionNumber" autocomplete="off">
+        </div>
+        
+        <div class="form-group" id="editParentPhoneGroup" style="display: none;">
+          <label for="editParentPhone">Parent Phone</label>
+          <input type="tel" id="editParentPhone" autocomplete="tel">
+        </div>
+        
+        <div class="form-group">
+          <label for="editPhone">Phone</label>
+          <input type="tel" id="editPhone" autocomplete="tel">
+        </div>
+        
+        <div class="form-group" id="editEmployeeIdGroup" style="display: none;">
+          <label for="editEmployeeId">Employee ID</label>
+          <input type="text" id="editEmployeeId" autocomplete="off">
+        </div>
+        
+        <div class="form-actions">
+          <button type="button" onclick="updateUserAccount()" class="btn-primary">Update Account</button>
+          <button type="button" onclick="openResetPassword()" class="btn-secondary">Reset Password</button>
+          <button type="button" onclick="closeEditForm()" class="btn-secondary">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Reset Password Modal -->
+  <div id="resetPasswordModal" class="modal" style="display: none;">
+    <div class="modal-content" style="max-width: 400px;">
+      <span class="close" onclick="closeResetPassword()">&times;</span>
+      <h2>Reset Password</h2>
+      
+      <div id="resetPasswordError" class="error-message" style="display: none;"></div>
+      <div id="resetPasswordSuccess" class="success-message" style="display: none;"></div>
+      
+      <form id="resetPasswordForm" onsubmit="return false;">
+        <div class="form-group">
+          <label for="resetNewPassword">New Password <span class="required">*</span></label>
+          <input type="password" id="resetNewPassword" required autocomplete="new-password">
+        </div>
+        
+        <div class="form-group">
+          <label for="resetConfirmPassword">Confirm Password <span class="required">*</span></label>
+          <input type="password" id="resetConfirmPassword" required autocomplete="new-password">
+          <span id="resetPasswordMatchError" class="inline-error" style="display: none; color: #dc3545; font-size: 14px;">Passwords do not match</span>
+        </div>
+        
+        <div class="form-actions">
+          <button type="button" onclick="resetUserPassword()" class="btn-primary">Reset Password</button>
+          <button type="button" onclick="closeResetPassword()" class="btn-secondary">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- FIREBASE SDK DO NOT CHANGE -->
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+<script src="firebase-init.js"></script>
+<script src="password-utils.js"></script>
+<script src="app.js"></script>
+<script src="accounts.js"></script>
+</body>
+</html>
+

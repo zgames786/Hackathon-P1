@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TNHA School App - Account Creation</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="hamburger" onclick="toggleSidebar()">☰</div>
+
+<div id="sidebar">
+  <button onclick="window.location.href='admin.html'">🏠 Dashboard</button>
+  <button onclick="window.location.href='fees.html'">💰 Fees</button>
+  <button onclick="window.location.href='attendance.html'">✅ Attendance</button>
+  <button onclick="window.location.href='management.html'">👨‍💼 Admin</button>
+  <button onclick="window.location.href='account-creation.html'">➕ Account Creation</button>
+  <button onclick="window.location.href='accounts.html'">👥 Accounts</button>
+  <button onclick="logout()">🚪 Logout</button>
+</div>
+
+<div class="header-title">Account Creation</div>
+<div class="header-subtitle">Create new teacher or student accounts</div>
+
+<div id="accountCreationTab">
+  <div class="account-creation-buttons">
+    <button onclick="openCreateForm('teacher')" class="btn-primary" style="padding: 20px 40px; font-size: 18px; margin: 10px;">
+      ➕ Create Teacher Account
+    </button>
+    <button onclick="openCreateForm('student')" class="btn-primary" style="padding: 20px 40px; font-size: 18px; margin: 10px;">
+      ➕ Create Student Account
+    </button>
+  </div>
+
+  <!-- Create Account Modal -->
+  <div id="createAccountModal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <span class="close" onclick="closeCreateForm()">&times;</span>
+      <h2 id="modalTitle">Create Account</h2>
+      
+      <div id="createAccountError" class="error-message" style="display: none;"></div>
+      <div id="createAccountSuccess" class="success-message" style="display: none;"></div>
+      
+      <form id="createAccountForm" onsubmit="return false;">
+        <div class="form-group">
+          <label for="newUsername">Username <span class="required">*</span></label>
+          <input type="text" id="newUsername" required autocomplete="off">
+        </div>
+        
+        <div class="form-group">
+          <label for="newPassword">Password <span class="required">*</span></label>
+          <input type="password" id="newPassword" required autocomplete="new-password">
+        </div>
+        
+        <div class="form-group">
+          <label for="confirmPassword">Confirm Password <span class="required">*</span></label>
+          <input type="password" id="confirmPassword" required autocomplete="new-password">
+          <span id="passwordMatchError" class="inline-error" style="display: none; color: #dc3545; font-size: 14px;">Passwords do not match</span>
+        </div>
+        
+        <div class="form-group">
+          <label for="fullName">Full Name</label>
+          <input type="text" id="fullName" autocomplete="name">
+        </div>
+        
+        <div class="form-group" id="classNameGroup" style="display: none;">
+          <label for="className">Class</label>
+          <input type="text" id="className" autocomplete="off">
+        </div>
+        
+        <div class="form-group" id="sectionGroup" style="display: none;">
+          <label for="section">Section</label>
+          <input type="text" id="section" autocomplete="off">
+        </div>
+        
+        <div class="form-group" id="admissionNumberGroup" style="display: none;">
+          <label for="admissionNumber">Admission Number</label>
+          <input type="text" id="admissionNumber" autocomplete="off">
+        </div>
+        
+        <div class="form-group" id="parentPhoneGroup" style="display: none;">
+          <label for="parentPhone">Parent Phone</label>
+          <input type="tel" id="parentPhone" autocomplete="tel">
+        </div>
+        
+        <div class="form-group">
+          <label for="phone">Phone</label>
+          <input type="tel" id="phone" autocomplete="tel">
+        </div>
+        
+        <div class="form-group" id="employeeIdGroup" style="display: none;">
+          <label for="employeeId">Employee ID</label>
+          <input type="text" id="employeeId" autocomplete="off">
+        </div>
+        
+        <div class="form-actions">
+          <button type="button" onclick="createUserAccount()" class="btn-primary">Create Account</button>
+          <button type="button" onclick="closeCreateForm()" class="btn-secondary">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- FIREBASE SDK DO NOT CHANGE -->
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+<script src="firebase-init.js"></script>
+<script src="password-utils.js"></script>
+<script src="app.js"></script>
+<script src="account-creation.js"></script>
+</body>
+</html>
+
