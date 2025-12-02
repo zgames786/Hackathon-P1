@@ -74,39 +74,47 @@ body {
 /* ===== ROLE SELECTION BUTTONS ===== */
 .role-selection-buttons {
     display: flex;
-    gap: 10px;
-    margin-bottom: 25px;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 20px;
     align-items: flex-start;
 }
 
 .role-btn {
-    flex: 1;
-    padding: 14px 20px;
-    font-size: 16px;
+    padding: 16px 32px;
+    font-size: 18px;
     cursor: pointer;
-    border: 2px solid #e0e0e0;
+    border: none;
     border-radius: 8px;
     background: white;
-    color: #5D6D7E;
+    color: #667eea;
     transition: all 0.2s;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     font-weight: 600;
-    text-align: center;
+    width: 100%;
+    max-width: 300px;
+    text-align: left;
 }
 
 .role-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     background: #f8f9fa;
-    border-color: #667eea;
+}
+
+.role-btn:active {
+    transform: translateY(0);
 }
 
 .role-btn-active {
     background: #667eea;
     color: white;
-    border-color: #667eea;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
 }
 
 .role-btn-active:hover {
     background: #5568d3;
-    border-color: #5568d3;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
 }
 
 /* ===== ACCOUNT TYPE BUTTONS ===== */
@@ -361,6 +369,8 @@ body {
     z-index: 999;
     padding-top: 80px;
     box-shadow: 2px 0 10px rgba(0,0,0,0.2);
+    display: flex;
+    flex-direction: column;
 }
 
 #sidebar.show {
@@ -390,11 +400,7 @@ body {
 
 #sidebar button:last-child {
     margin-top: auto;
-    position: absolute;
-    bottom: 20px;
-    width: calc(100% - 40px);
-    margin-left: 20px;
-    margin-right: 20px;
+    margin-bottom: 20px;
 }
 
 /* ===== HEADER ===== */
@@ -1868,6 +1874,7 @@ button {
 /* ===== SIDEBAR SCROLL ===== */
 #sidebar {
     overflow-y: auto;
+    overflow-x: hidden;
     scrollbar-width: thin;
     scrollbar-color: rgba(255,255,255,0.3) transparent;
 }

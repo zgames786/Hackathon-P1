@@ -145,6 +145,12 @@ function selectRole(role) {
         activeBtn.classList.add("role-btn-active");
     }
     
+    // Show login form when role is selected
+    const loginForm = document.getElementById("loginForm");
+    if (loginForm) {
+        loginForm.style.display = "block";
+    }
+    
     // Show/hide "Create Admin Account" link
     const createAdminLink = document.getElementById("createAdminLink");
     if (createAdminLink) {

@@ -13,15 +13,10 @@
 
 <div id="sidebar">
   <button onclick="showTab('dashboard')">🏠 Dashboard</button>
-  <button onclick="showTab('communication')">💬 Communication</button>
-  <button onclick="window.location.href='fees.html'">💰 Fees</button>
-  <button onclick="showTab('expenses')">📊 Expenses</button>
-  <button onclick="showTab('transport')">🚌 Transport</button>
-  <button onclick="showTab('reports')">📈 Reports</button>
-  <button onclick="window.location.href='attendance.html'">✅ Attendance</button>
-  <button onclick="showTab('help')">❓ Help</button>
-  <button onclick="window.location.href='account-creation.html'">➕ Account Creation</button>
-  <button onclick="window.location.href='accounts.html'">👥 Accounts</button>
+  <button onclick="navigateTo('fees.html')">💰 Fees</button>
+  <button onclick="navigateTo('attendance.html')">✅ Attendance</button>
+  <button onclick="navigateTo('account-creation.html')">➕ Account Creation</button>
+  <button onclick="navigateTo('accounts.html')">👥 Accounts</button>
   <button onclick="logout()">🚪 Logout</button>
 </div>
 
@@ -132,6 +127,7 @@
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
 <script src="firebase-init.js"></script>
 <script src="app.js"></script>
+<script src="sidebar-nav.js"></script>
 <script src="admin.js"></script>
 <script src="fees.js"></script>
 <script src="attendance.js"></script>
