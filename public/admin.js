@@ -68,8 +68,15 @@ window.getFirestoreDocs = getFirestoreDocs;
 
 // Load admin data from Firestore
 async function loadAdminData() {
+    // Wait for Firestore to be ready
+    let attempts = 0;
+    while (!window.db && attempts < 20) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        attempts++;
+    }
+    
     if (!window.db) {
-        console.error("Firestore not initialized");
+        console.error("Firestore not initialized after waiting");
         const totalStudentsEl = document.getElementById("totalStudents");
         const totalTeachersEl = document.getElementById("totalTeachers");
         const classesListEl = document.getElementById("classesList");
@@ -80,35 +87,83 @@ async function loadAdminData() {
     }
     
     try {
-        // Load all users from unified users collection
-        const allUsers = await getFirestoreDocs("users");
+        // Query students and teachers directly from Firestore using where clauses
+        // This is more efficient and ensures we get the correct counts
+        const studentsSnapshot = await window.db.collection("users")
+            .where("role", "==", "student")
+            .get();
         
-        // Filter students and teachers by role
-        adminData.students = allUsers.filter(user => user.role === "student");
-        adminData.teachers = allUsers.filter(user => user.role === "teacher");
+        const teachersSnapshot = await window.db.collection("users")
+            .where("role", "==", "teacher")
+            .get();
+        
+        // Convert snapshots to arrays
+        adminData.students = [];
+        studentsSnapshot.forEach((doc) => {
+            const data = doc.data();
+            adminData.students.push({ id: doc.id, ...data });
+        });
+        
+        adminData.teachers = [];
+        teachersSnapshot.forEach((doc) => {
+            const data = doc.data();
+            adminData.teachers.push({ id: doc.id, ...data });
+        });
         
         // Load classes
         adminData.classes = await getFirestoreDocs("classes");
         
-        // Update dashboard
+        // Update dashboard - ensure arrays are populated before updating
+        console.log("Before updateDashboard - students:", adminData.students.length, "teachers:", adminData.teachers.length);
         await updateAdminDashboard();
+        console.log("After updateDashboard - students:", adminData.students.length, "teachers:", adminData.teachers.length);
     } catch (error) {
         console.error("Error loading admin data:", error);
-        alert("Error loading data from Firestore. Please check your connection.");
+        console.error("Error details:", error.code, error.message);
+        const totalStudentsEl = document.getElementById("totalStudents");
+        const totalTeachersEl = document.getElementById("totalTeachers");
+        if (totalStudentsEl) totalStudentsEl.textContent = "Error";
+        if (totalTeachersEl) totalTeachersEl.textContent = "Error";
     }
 }
 
 // Update admin dashboard with data
 async function updateAdminDashboard() {
-    // Update total students - count from filtered array
-    const totalStudents = adminData.students ? adminData.students.length : 0;
-    const totalStudentsEl = document.getElementById("totalStudents");
-    if (totalStudentsEl) totalStudentsEl.textContent = totalStudents;
+    // Update total students - query directly from Firestore users collection
+    try {
+        const studentsSnapshot = await window.db.collection("users")
+            .where("role", "==", "student")
+            .get();
+        const totalStudents = studentsSnapshot.size;
+        const totalStudentsEl = document.getElementById("totalStudents");
+        if (totalStudentsEl) {
+            totalStudentsEl.textContent = totalStudents.toString();
+        }
+    } catch (error) {
+        console.error("Error counting students:", error);
+        const totalStudentsEl = document.getElementById("totalStudents");
+        if (totalStudentsEl) {
+            totalStudentsEl.textContent = "Error";
+        }
+    }
     
-    // Update total teachers - count from filtered array
-    const totalTeachers = adminData.teachers ? adminData.teachers.length : 0;
-    const totalTeachersEl = document.getElementById("totalTeachers");
-    if (totalTeachersEl) totalTeachersEl.textContent = totalTeachers;
+    // Update total teachers - query directly from Firestore users collection
+    try {
+        const teachersSnapshot = await window.db.collection("users")
+            .where("role", "==", "teacher")
+            .get();
+        const totalTeachers = teachersSnapshot.size;
+        const totalTeachersEl = document.getElementById("totalTeachers");
+        if (totalTeachersEl) {
+            totalTeachersEl.textContent = totalTeachers.toString();
+        }
+    } catch (error) {
+        console.error("Error counting teachers:", error);
+        const totalTeachersEl = document.getElementById("totalTeachers");
+        if (totalTeachersEl) {
+            totalTeachersEl.textContent = "Error";
+        }
+    }
     
     // Load and update fees data
     await updateDashboardFees();

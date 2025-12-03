@@ -145,15 +145,42 @@ function getCurrentUserData() {
 
 // Helper function to get user classes from unified structure
 function getUserClasses() {
-    const userData = getCurrentUserData();
-    if (!userData) return [];
-    
-    if (userData.role === "teacher") {
-        return userData.teacherInfo?.classes || [];
-    } else if (userData.role === "student") {
-        return userData.studentInfo?.enrolledClasses || [];
+    try {
+        // Always read fresh data from localStorage
+        const userSessionStr = localStorage.getItem("userSession");
+        if (!userSessionStr) {
+            return [];
+        }
+        
+        const userData = JSON.parse(userSessionStr);
+        if (!userData || !userData.role) {
+            return [];
+        }
+        
+        if (userData.role === "teacher") {
+            if (!userData.teacherInfo) {
+                return [];
+            }
+            const classes = Array.isArray(userData.teacherInfo.classes) 
+                ? userData.teacherInfo.classes 
+                : [];
+            // Filter out any null/undefined/invalid class IDs
+            return classes.filter(classId => classId && typeof classId === 'string' && classId.trim() !== '');
+        } else if (userData.role === "student") {
+            if (!userData.studentInfo) {
+                return [];
+            }
+            const classes = Array.isArray(userData.studentInfo.enrolledClasses) 
+                ? userData.studentInfo.enrolledClasses 
+                : [];
+            // Filter out any null/undefined/invalid class IDs
+            return classes.filter(classId => classId && typeof classId === 'string' && classId.trim() !== '');
+        }
+        return [];
+    } catch (error) {
+        console.error("Error getting user classes:", error);
+        return [];
     }
-    return [];
 }
 
 // Helper function to update user classes in localStorage and Firestore
@@ -514,7 +541,9 @@ function setupSidebarButtons() {
             const match = onclick.match(/showTab\(['"]([^'"]+)['"]\)/);
             if (match && match[1]) {
                 const tabName = match[1];
-                // Add click event listener as backup
+                // Remove the onclick attribute to prevent double-calling
+                button.removeAttribute("onclick");
+                // Add click event listener instead
                 button.addEventListener("click", function(e) {
                     e.preventDefault();
                     e.stopPropagation();
@@ -530,7 +559,22 @@ function toggleSidebar() {
 }
 
 // Make sure showTab is accessible globally
-window.showTab = function(tab) {
+// Prevent double-calling by tracking if tab switch is in progress
+let isTabSwitching = false;
+
+window.showTab = async function(tab) {
+    // Prevent double-calling
+    if (isTabSwitching) {
+        return;
+    }
+    
+    // Prevent switching to the same tab
+    if (currentTab === tab) {
+        return;
+    }
+    
+    isTabSwitching = true;
+    
     try {
         // Close sidebar on mobile after clicking
         const sidebar = document.getElementById("sidebar");
@@ -553,25 +597,36 @@ window.showTab = function(tab) {
             targetTab.style.display = "block";
             currentTab = tab;
             
-            // Render content based on tab
-            if (tab === "assignments") {
-                renderAssignments();
-            } else if (tab === "calendar") {
-                renderCalendar();
-            } else if (tab === "dashboard") {
-                renderPieChart();
-                renderClasses();
-            } else if (tab === "statistics") {
-                renderStatistics();
-            } else if (tab === "suggestions") {
-                renderSuggestions();
+            // Render content based on tab - wrap each in try-catch to prevent errors from stopping the tab switch
+            // Make tab switching async and await all async render functions
+            try {
+                if (tab === "assignments") {
+                    await renderAssignments();
+                } else if (tab === "calendar") {
+                    await renderCalendar();
+                } else if (tab === "dashboard") {
+                    await renderPieChart();
+                    await renderClasses();
+                } else if (tab === "statistics") {
+                    await renderStatistics();
+                } else if (tab === "suggestions") {
+                    renderSuggestions(); // Keep sync if it's not async
+                }
+            } catch (renderError) {
+                // Log render errors but don't show alert - tab should still switch
+                console.error("Error rendering tab content:", renderError);
             }
         } else {
             console.error("Tab not found:", tab + "Tab");
         }
     } catch (error) {
+        // Only log errors, don't show alert to user - errors are already handled in render functions
         console.error("Error in showTab:", error);
-        alert("Error switching tabs. Please refresh the page.");
+    } finally {
+        // Always reset the flag, even if there was an error
+        setTimeout(() => {
+            isTabSwitching = false;
+        }, 100);
     }
 };
 
@@ -581,24 +636,65 @@ async function joinClass() {
         showError("Only students can join classes");
         return;
     }
-    let code = prompt("Enter class code:").trim().toUpperCase();
-    if (!code) return;
+    
+    if (!window.db) {
+        showError("Firestore not initialized. Please refresh the page.");
+        return;
+    }
+    
+    let classId = prompt("Enter class code:").trim().toUpperCase();
+    if (!classId) return;
     
     try {
-        if (classesDB[code]) {
-            const userClasses = getUserClasses();
-            if (!userClasses.includes(code)) {
-                userClasses.push(code);
-                await updateUserClasses(userClasses);
-                showSuccess("Joined class: " + classesDB[code].name);
-                renderClasses();
-                renderPieChart();
-            } else {
-                showError("You are already in this class");
-            }
-        } else {
-            showError("Class code not found");
+        const userData = getCurrentUserData();
+        if (!userData || !userData.uid) {
+            showError("User data not found. Please log in again.");
+            return;
         }
+        
+        // Get class from Firestore
+        const classDoc = await window.db.collection("classes").doc(classId).get();
+        
+        if (!classDoc.exists) {
+            showError("Class code not found");
+            return;
+        }
+        
+        const classData = classDoc.data();
+        
+        // Check if student is already in the class
+        const existingStudent = classData.students?.find(s => s.uid === userData.uid);
+        if (existingStudent) {
+            showError("You are already in this class");
+            return;
+        }
+        
+        // Get student name
+        const studentName = userData.studentInfo?.fullName || userData.username || "";
+        
+        // Add student to class's students array in Firestore
+        const students = classData.students || [];
+        students.push({
+            uid: userData.uid,
+            name: studentName
+        });
+        
+        await window.db.collection("classes").doc(classId).update({
+            students: students
+        });
+        
+        // Update student's enrolledClasses in Firestore user document
+        const userClasses = getUserClasses();
+        if (!userClasses.includes(classId)) {
+            userClasses.push(classId);
+            await updateUserClasses(userClasses);
+        }
+        
+        showSuccess("Joined class: " + classData.className);
+        
+        // Refresh display
+        await renderClasses();
+        renderPieChart();
     } catch (error) {
         console.error("Error joining class:", error);
         showError("Error joining class. Please try again.");
@@ -610,58 +706,175 @@ async function createClass() {
         showError("Only teachers can create classes");
         return;
     }
+    
+    if (!window.db) {
+        showError("Firestore not initialized. Please refresh the page.");
+        return;
+    }
+    
     let name = prompt("Enter class name:").trim();
     if (!name) return;
     
+    let section = prompt("Enter section (optional):").trim() || "";
+    
     try {
-        let code = generateClassCode();
-        classesDB[code] = {name: name, teacher: loggedInUser, assignments: []};
+        const userData = getCurrentUserData();
+        if (!userData || !userData.uid) {
+            showError("User data not found. Please log in again.");
+            return;
+        }
         
+        // Generate unique class code
+        const classId = await generateClassCode();
+        
+        // Get teacher name
+        const teacherName = userData.teacherInfo?.fullName || userData.username || "";
+        
+        // Create class document in Firestore
+        const classData = {
+            classId: classId,
+            className: name,
+            section: section,
+            teacherId: userData.uid,
+            teacherName: teacherName,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            students: [],
+            assignments: []
+        };
+        
+        await window.db.collection("classes").doc(classId).set(classData);
+        
+        // Update teacher's classes list in Firestore
         const userClasses = getUserClasses();
-        if (!userClasses.includes(code)) {
-            userClasses.push(code);
+        if (!userClasses.includes(classId)) {
+            userClasses.push(classId);
             await updateUserClasses(userClasses);
         }
-        saveData();
-        showSuccess("Class created! Code: " + code);
-        renderClasses();
+        
+        showSuccess("Class created! Code: " + classId);
+        await renderClasses();
     } catch (error) {
         console.error("Error creating class:", error);
         showError("Error creating class. Please try again.");
     }
 }
 
-function generateClassCode() {
+// Helper function to generate a unique class code
+async function generateClassCode() {
+    if (!window.db) {
+        // Fallback if Firestore not available
+        return Math.random().toString(36).substring(2, 8).toUpperCase();
+    }
+    
     let code;
-    do {
+    let exists = true;
+    let attempts = 0;
+    const maxAttempts = 10;
+    
+    // Generate unique code by checking Firestore
+    while (exists && attempts < maxAttempts) {
         code = Math.random().toString(36).substring(2, 8).toUpperCase();
-    } while (classesDB[code]);
+        try {
+            const classDoc = await window.db.collection("classes").doc(code).get();
+            exists = classDoc.exists;
+        } catch (error) {
+            console.error("Error checking class code:", error);
+            // If error, assume code is unique to avoid infinite loop
+            exists = false;
+        }
+        attempts++;
+    }
+    
     return code;
 }
 
-function renderClasses() {
+// Helper function to get class from Firestore
+async function getClassFromFirestore(classId) {
+    if (!window.db) return null;
+    
+    try {
+        const classDoc = await window.db.collection("classes").doc(classId).get();
+        if (classDoc.exists) {
+            return { id: classDoc.id, ...classDoc.data() };
+        }
+        return null;
+    } catch (error) {
+        console.error("Error getting class from Firestore:", error);
+        return null;
+    }
+}
+
+// Helper function to get all classes for current user from Firestore
+
+async function renderClasses() {
     const container = document.getElementById("classesContainer");
     if (!container) return;
     
     try {
-        const userClasses = getUserClasses();
-        if (userClasses.length === 0) {
+        if (!window.db) {
+            container.innerHTML = "<p>Error: Firestore not initialized. Please refresh the page.</p>";
+            return;
+        }
+        
+        // Get class IDs from user's enrolled classes
+        const userClassIds = getUserClasses();
+        
+        if (!Array.isArray(userClassIds) || userClassIds.length === 0) {
             container.innerHTML = "<p>No classes yet. " + (userType === "teacher" ? "Create" : "Join") + " a class to get started!</p>";
             return;
         }
+        
         container.innerHTML = "<h3>Your Classes</h3>";
-        userClasses.forEach(code => {
-            if (classesDB[code]) {
+        
+        // Load classes from Firestore
+        for (const classId of userClassIds) {
+            if (!classId) continue; // Skip undefined/null class IDs
+            
+            try {
+                const classDoc = await window.db.collection("classes").doc(classId).get();
+                
+                if (classDoc.exists) {
+                    const classData = classDoc.data();
+                    if (!classData) {
+                        console.error("Class data is null for classId:", classId);
+                        continue;
+                    }
+                    
+                    const assignments = Array.isArray(classData.assignments) ? classData.assignments : [];
+                    
+                    const classDiv = document.createElement("div");
+                    classDiv.className = "class-card";
+                    classDiv.innerHTML = `
+                        <h4>${classData.className || "Unnamed Class"}</h4>
+                        <p>Code: <strong>${classId}</strong></p>
+                        ${classData.section ? `<p>Section: ${classData.section}</p>` : ""}
+                        <p>Assignments: ${assignments.length}</p>
+                    `;
+                    container.appendChild(classDiv);
+                } else {
+                    // Show placeholder if class not found
+                    const classDiv = document.createElement("div");
+                    classDiv.className = "class-card";
+                    classDiv.innerHTML = `
+                        <h4>Class Code: ${classId}</h4>
+                        <p>Code: <strong>${classId}</strong></p>
+                        <p style="color: #666; font-style: italic;">Class not found</p>
+                    `;
+                    container.appendChild(classDiv);
+                }
+            } catch (firestoreError) {
+                console.error("Error loading class from Firestore for classId:", classId, firestoreError);
+                // Show placeholder on error
                 const classDiv = document.createElement("div");
                 classDiv.className = "class-card";
                 classDiv.innerHTML = `
-                    <h4>${classesDB[code].name}</h4>
-                    <p>Code: <strong>${code}</strong></p>
-                    <p>Assignments: ${classesDB[code].assignments.length}</p>
+                    <h4>Class Code: ${classId}</h4>
+                    <p>Code: <strong>${classId}</strong></p>
+                    <p style="color: #666; font-style: italic;">Error loading class</p>
                 `;
                 container.appendChild(classDiv);
             }
-        });
+        }
     } catch (error) {
         console.error("Error rendering classes:", error);
         container.innerHTML = "<p>Error loading classes. Please refresh the page.</p>";
@@ -678,7 +891,7 @@ function showAssignmentTab(tab) {
     renderAssignments();
 }
 
-function renderAssignments() {
+async function renderAssignments() {
     const container = document.getElementById("assignmentsContainer");
     if (!container) return;
     
@@ -700,53 +913,97 @@ function renderAssignments() {
     container.appendChild(assignmentsList);
     
     try {
-        const userClasses = getUserClasses();
+        if (!window.db) {
+            const listContainer = document.getElementById("assignmentsList");
+            if (listContainer) {
+                listContainer.innerHTML = "<p style='text-align: center; color: #666; padding: 20px;'>Firestore not initialized. Please refresh the page.</p>";
+            }
+            return;
+        }
+        
+        const userClassIds = getUserClasses();
+        if (!Array.isArray(userClassIds)) {
+            const listContainer = document.getElementById("assignmentsList");
+            if (listContainer) {
+                listContainer.innerHTML = "<p style='text-align: center; color: #666; padding: 20px;'>Error loading classes. Please refresh the page.</p>";
+            }
+            return;
+        }
+        
         let allAssignments = [];
     
-    userClasses.forEach(code => {
-        if (classesDB[code]) {
-            classesDB[code].assignments.forEach(assignment => {
-                const dueDate = new Date(assignment.due);
-                const now = new Date();
-                now.setHours(0, 0, 0, 0);
-                dueDate.setHours(0, 0, 0, 0);
+        // Load assignments from Firestore classes
+        for (const classId of userClassIds) {
+            if (!classId) continue; // Skip undefined/null class IDs
+            try {
+                const classDoc = await window.db.collection("classes").doc(classId).get();
                 
-                let status;
-                if (userType === "student") {
-                    // Get student's status for this assignment
-                    const statusKey = `${loggedInUser}_${code}_${assignment.id}`;
-                    status = studentAssignmentsDB[statusKey] || "active";
-                    // Auto-update to missing if past due
-                    if (status === "active" && dueDate < now) {
-                        status = "missing";
-                        studentAssignmentsDB[statusKey] = "missing";
-                        saveData();
+                if (classDoc.exists) {
+                    const classData = classDoc.data();
+                    if (!classData) {
+                        console.error("Class data is null for classId:", classId);
+                        continue;
                     }
-                } else {
-                    // Teachers see all assignments (they manage them)
-                    status = "active";
-                }
-                
-                // For students, filter by status; for teachers, show all
-                if (userType === "student" && status === currentAssignmentTab) {
-                    allAssignments.push({
-                        ...assignment,
-                        classCode: code,
-                        className: classesDB[code].name,
-                        status: status
+                    
+                    const assignments = Array.isArray(classData.assignments) ? classData.assignments : [];
+                    const className = classData.className || "Unnamed Class";
+                    
+                    assignments.forEach(assignment => {
+                        if (!assignment || !assignment.id || !assignment.due) {
+                            console.warn("Invalid assignment data:", assignment);
+                            return; // Skip invalid assignments
+                        }
+                        
+                        const dueDate = new Date(assignment.due);
+                        if (isNaN(dueDate.getTime())) {
+                            console.warn("Invalid due date for assignment:", assignment);
+                            return; // Skip assignments with invalid dates
+                        }
+                        
+                        const now = new Date();
+                        now.setHours(0, 0, 0, 0);
+                        dueDate.setHours(0, 0, 0, 0);
+                        
+                        let status;
+                        if (userType === "student") {
+                            // Get student's status for this assignment
+                            const statusKey = `${loggedInUser}_${classId}_${assignment.id}`;
+                            status = studentAssignmentsDB[statusKey] || "active";
+                            // Auto-update to missing if past due
+                            if (status === "active" && dueDate < now) {
+                                status = "missing";
+                                studentAssignmentsDB[statusKey] = "missing";
+                                saveData();
+                            }
+                        } else {
+                            // Teachers see all assignments (they manage them)
+                            status = "active";
+                        }
+                        
+                        // For students, filter by status; for teachers, show all
+                        if (userType === "student" && status === currentAssignmentTab) {
+                            allAssignments.push({
+                                ...assignment,
+                                classCode: classId,
+                                className: className,
+                                status: status
+                            });
+                        } else if (userType === "teacher") {
+                            // Teachers see all assignments
+                            allAssignments.push({
+                                ...assignment,
+                                classCode: classId,
+                                className: className,
+                                status: status
+                            });
+                        }
                     });
-                } else if (userType === "teacher") {
-                    // Teachers see all assignments
-                    allAssignments.push({
-                        ...assignment,
-                        classCode: code,
-                        className: classesDB[code].name,
-                        status: status
-                    });
                 }
-            });
+            } catch (error) {
+                console.error("Error loading class assignments for classId:", classId, error);
+                // Continue processing other classes even if one fails
+            }
         }
-    });
     
     const listContainer = document.getElementById("assignmentsList");
     if (!listContainer) return;
@@ -759,17 +1016,30 @@ function renderAssignments() {
         allAssignments.sort((a, b) => new Date(a.due) - new Date(b.due));
         
         allAssignments.forEach(assignment => {
+            // Validate assignment data before rendering
+            if (!assignment || !assignment.id || !assignment.name || !assignment.due || !assignment.classCode || !assignment.className) {
+                console.warn("Skipping invalid assignment:", assignment);
+                return;
+            }
+            
             const assignmentDiv = document.createElement("div");
             assignmentDiv.className = "assignment-card";
             const dueDate = new Date(assignment.due);
+            
+            // Validate date before formatting
+            if (isNaN(dueDate.getTime())) {
+                console.warn("Skipping assignment with invalid date:", assignment);
+                return;
+            }
+            
             const formattedDate = `${String(dueDate.getMonth() + 1).padStart(2, '0')}/${String(dueDate.getDate()).padStart(2, '0')}/${dueDate.getFullYear()}`;
             assignmentDiv.innerHTML = `
                 <div class="assignment-header">
-                    <h4>${assignment.name}</h4>
+                    <h4>${assignment.name || "Unnamed Assignment"}</h4>
                     ${userType === "teacher" ? `<button onclick="editAssignment('${assignment.classCode}', '${assignment.id}')" class="edit-btn">✏️</button>
                     <button onclick="deleteAssignment('${assignment.classCode}', '${assignment.id}')" class="delete-btn">🗑️</button>` : ""}
                 </div>
-                <p><strong>Class:</strong> ${assignment.className}</p>
+                <p><strong>Class:</strong> ${assignment.className || "Unknown Class"}</p>
                 <p><strong>Due:</strong> ${formattedDate}</p>
                 ${userType === "student" && assignment.status !== "done" ? `<button onclick="updateAssignmentStatus('${assignment.classCode}', '${assignment.id}', 'done')" class="status-btn">Mark as Done</button>` : ""}
             `;
@@ -784,11 +1054,17 @@ function renderAssignments() {
     }
 }
 
-function addAssignment() {
+async function addAssignment() {
     if (userType !== "teacher") {
         showError("Only teachers can add assignments");
         return;
     }
+    
+    if (!window.db) {
+        showError("Firestore not initialized. Please refresh the page.");
+        return;
+    }
+    
     try {
         const userClasses = getUserClasses();
         if (userClasses.length === 0) {
@@ -796,52 +1072,81 @@ function addAssignment() {
             return;
         }
         
-        let classCode = prompt("Enter class code:").trim().toUpperCase();
-    if (!classCode || !classesDB[classCode]) {
-        showError("Invalid class code");
-        return;
-    }
-    if (classesDB[classCode].teacher !== loggedInUser) {
-        showError("You can only add assignments to your own classes");
-        return;
-    }
-    
-    let name = prompt("Assignment name:").trim();
-    if (!name) return;
-    
-    let dueStr = prompt("Due date (MM/DD/YYYY format, e.g., 12/25/2024):").trim();
-    if (!dueStr) return;
-    
-    let dueDate = parseDate(dueStr);
-    if (!dueDate || isNaN(dueDate.getTime())) {
-        showError("Invalid date format. Please use MM/DD/YYYY format (e.g., 12/25/2024)");
-        return;
-    }
-    
-    // Check if date is in the past
-    const now = new Date();
-    now.setHours(0, 0, 0, 0);
-    dueDate.setHours(0, 0, 0, 0);
-    if (dueDate < now) {
-        showError("Due date cannot be in the past");
-        return;
-    }
-    
-    // Check if date is more than 3 years in the future
-    const maxDate = new Date();
-    maxDate.setFullYear(maxDate.getFullYear() + 3);
-    if (dueDate > maxDate) {
-        showError("Due date cannot be more than 3 years in the future");
-        return;
-    }
-    
-    const assignmentId = Date.now().toString();
-    classesDB[classCode].assignments.push({
-        id: assignmentId,
-        name: name,
-        due: dueDate.toISOString()
-    });
-        saveData();
+        let classId = prompt("Enter class code:").trim().toUpperCase();
+        if (!classId) {
+            showError("Invalid class code");
+            return;
+        }
+        
+        // Get class from Firestore
+        const classDoc = await window.db.collection("classes").doc(classId).get();
+        if (!classDoc.exists) {
+            showError("Invalid class code");
+            return;
+        }
+        
+        const classData = classDoc.data();
+        if (!classData) {
+            showError("Invalid class data");
+            return;
+        }
+        
+        const userData = getCurrentUserData();
+        if (!userData || !userData.uid) {
+            showError("User data not found. Please log in again.");
+            return;
+        }
+        
+        // Verify teacher owns this class
+        if (classData.teacherId !== userData.uid) {
+            showError("You can only add assignments to your own classes");
+            return;
+        }
+        
+        let name = prompt("Assignment name:").trim();
+        if (!name) return;
+        
+        let dueStr = prompt("Due date (MM/DD/YYYY format, e.g., 12/25/2024):").trim();
+        if (!dueStr) return;
+        
+        let dueDate = parseDate(dueStr);
+        if (!dueDate || isNaN(dueDate.getTime())) {
+            showError("Invalid date format. Please use MM/DD/YYYY format (e.g., 12/25/2024)");
+            return;
+        }
+        
+        // Check if date is in the past
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+        dueDate.setHours(0, 0, 0, 0);
+        if (dueDate < now) {
+            showError("Due date cannot be in the past");
+            return;
+        }
+        
+        // Check if date is more than 3 years in the future
+        const maxDate = new Date();
+        maxDate.setFullYear(maxDate.getFullYear() + 3);
+        if (dueDate > maxDate) {
+            showError("Due date cannot be more than 3 years in the future");
+            return;
+        }
+        
+        const assignmentId = Date.now().toString();
+        const newAssignment = {
+            id: assignmentId,
+            name: name,
+            due: dueDate.toISOString()
+        };
+        
+        // Update assignments array in Firestore
+        const assignments = classData.assignments || [];
+        assignments.push(newAssignment);
+        
+        await window.db.collection("classes").doc(classId).update({
+            assignments: assignments
+        });
+        
         showSuccess("Assignment added!");
         renderAssignments();
         renderPieChart();
@@ -852,72 +1157,159 @@ function addAssignment() {
     }
 }
 
-function editAssignment(classCode, assignmentId) {
+async function editAssignment(classId, assignmentId) {
     if (userType !== "teacher") return;
-    const assignment = classesDB[classCode].assignments.find(a => a.id === assignmentId);
-    if (!assignment) return;
     
-    let name = prompt("Assignment name:", assignment.name).trim();
-    if (!name) return;
-    
-    // Convert existing date to MM/DD/YYYY format for prompt
-    const existingDate = new Date(assignment.due);
-    const formattedExisting = `${String(existingDate.getMonth() + 1).padStart(2, '0')}/${String(existingDate.getDate()).padStart(2, '0')}/${existingDate.getFullYear()}`;
-    let dueStr = prompt("Due date (MM/DD/YYYY format, e.g., 12/25/2024):", formattedExisting).trim();
-    if (!dueStr) return;
-    
-    let dueDate = parseDate(dueStr);
-    if (!dueDate || isNaN(dueDate.getTime())) {
-        showError("Invalid date format. Please use MM/DD/YYYY format (e.g., 12/25/2024)");
+    if (!window.db) {
+        showError("Firestore not initialized. Please refresh the page.");
         return;
     }
     
-    const now = new Date();
-    now.setHours(0, 0, 0, 0);
-    dueDate.setHours(0, 0, 0, 0);
-    if (dueDate < now) {
-        showError("Due date cannot be in the past");
-        return;
+    try {
+        // Get class from Firestore
+        const classDoc = await window.db.collection("classes").doc(classId).get();
+        if (!classDoc.exists) {
+            showError("Class not found");
+            return;
+        }
+        
+        const classData = classDoc.data();
+        const assignments = classData.assignments || [];
+        const assignment = assignments.find(a => a.id === assignmentId);
+        
+        if (!assignment) {
+            showError("Assignment not found");
+            return;
+        }
+        
+        let name = prompt("Assignment name:", assignment.name).trim();
+        if (!name) return;
+        
+        // Convert existing date to MM/DD/YYYY format for prompt
+        const existingDate = new Date(assignment.due);
+        const formattedExisting = `${String(existingDate.getMonth() + 1).padStart(2, '0')}/${String(existingDate.getDate()).padStart(2, '0')}/${existingDate.getFullYear()}`;
+        let dueStr = prompt("Due date (MM/DD/YYYY format, e.g., 12/25/2024):", formattedExisting).trim();
+        if (!dueStr) return;
+        
+        let dueDate = parseDate(dueStr);
+        if (!dueDate || isNaN(dueDate.getTime())) {
+            showError("Invalid date format. Please use MM/DD/YYYY format (e.g., 12/25/2024)");
+            return;
+        }
+        
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+        dueDate.setHours(0, 0, 0, 0);
+        if (dueDate < now) {
+            showError("Due date cannot be in the past");
+            return;
+        }
+        
+        const maxDate = new Date();
+        maxDate.setFullYear(maxDate.getFullYear() + 3);
+        if (dueDate > maxDate) {
+            showError("Due date cannot be more than 3 years in the future");
+            return;
+        }
+        
+        // Update assignment in array
+        const assignmentIndex = assignments.findIndex(a => a.id === assignmentId);
+        if (assignmentIndex !== -1) {
+            assignments[assignmentIndex] = {
+                ...assignments[assignmentIndex],
+                name: name,
+                due: dueDate.toISOString()
+            };
+            
+            // Update in Firestore
+            await window.db.collection("classes").doc(classId).update({
+                assignments: assignments
+            });
+            
+            showSuccess("Assignment updated!");
+            renderAssignments();
+            renderPieChart();
+            renderCalendar();
+        }
+    } catch (error) {
+        console.error("Error editing assignment:", error);
+        showError("Error updating assignment. Please try again.");
     }
-    
-    const maxDate = new Date();
-    maxDate.setFullYear(maxDate.getFullYear() + 3);
-    if (dueDate > maxDate) {
-        showError("Due date cannot be more than 3 years in the future");
-        return;
-    }
-    
-    assignment.name = name;
-    assignment.due = dueDate.toISOString();
-    saveData();
-    showSuccess("Assignment updated!");
-    renderAssignments();
-    renderPieChart();
-    renderCalendar();
 }
 
-function deleteAssignment(classCode, assignmentId) {
+async function deleteAssignment(classId, assignmentId) {
     if (userType !== "teacher") return;
+    
     if (!confirm("Are you sure you want to delete this assignment?")) return;
     
-    classesDB[classCode].assignments = classesDB[classCode].assignments.filter(a => a.id !== assignmentId);
-    saveData();
-    showSuccess("Assignment deleted!");
-    renderAssignments();
-    renderPieChart();
-    renderCalendar();
+    if (!window.db) {
+        showError("Firestore not initialized. Please refresh the page.");
+        return;
+    }
+    
+    try {
+        // Get class from Firestore
+        const classDoc = await window.db.collection("classes").doc(classId).get();
+        if (!classDoc.exists) {
+            showError("Class not found");
+            return;
+        }
+        
+        const classData = classDoc.data();
+        const assignments = (classData.assignments || []).filter(a => a.id !== assignmentId);
+        
+        // Update in Firestore
+        await window.db.collection("classes").doc(classId).update({
+            assignments: assignments
+        });
+        
+        showSuccess("Assignment deleted!");
+        renderAssignments();
+        renderPieChart();
+        renderCalendar();
+    } catch (error) {
+        console.error("Error deleting assignment:", error);
+        showError("Error deleting assignment. Please try again.");
+    }
 }
 
-function updateAssignmentStatus(classCode, assignmentId, status) {
+async function updateAssignmentStatus(classId, assignmentId, status) {
     if (userType !== "student") return;
-    const assignment = classesDB[classCode].assignments.find(a => a.id === assignmentId);
-    if (!assignment) return;
     
-    const statusKey = `${loggedInUser}_${classCode}_${assignmentId}`;
-    studentAssignmentsDB[statusKey] = status;
-    saveData();
-    renderAssignments();
-    renderPieChart();
+    if (!window.db) {
+        showError("Firestore not initialized. Please refresh the page.");
+        return;
+    }
+    
+    try {
+        // Verify assignment exists in Firestore
+        const classDoc = await window.db.collection("classes").doc(classId).get();
+        if (!classDoc.exists) {
+            showError("Class not found");
+            return;
+        }
+        
+        const classData = classDoc.data();
+        const assignments = classData.assignments || [];
+        const assignment = assignments.find(a => a.id === assignmentId);
+        
+        if (!assignment) {
+            showError("Assignment not found");
+            return;
+        }
+        
+        // Update status in localStorage (student assignments tracking)
+        const statusKey = `${loggedInUser}_${classId}_${assignmentId}`;
+        studentAssignmentsDB[statusKey] = status;
+        saveData();
+        
+        renderAssignments();
+        renderPieChart();
+        renderCalendar();
+    } catch (error) {
+        console.error("Error updating assignment status:", error);
+        showError("Error updating assignment status. Please try again.");
+    }
 }
 
 function parseDate(dateStr) {
@@ -956,44 +1348,80 @@ function parseDate(dateStr) {
 }
 
 // ======= PIE CHART =======
-function renderPieChart() {
+async function renderPieChart() {
     const canvas = document.getElementById("piechart");
     if (!canvas) return;
     
     try {
-        const userClasses = getUserClasses();
+        if (!window.db) {
+            console.error("Firestore not initialized for pie chart");
+            return;
+        }
+        
+        const userClassIds = getUserClasses();
+        if (!Array.isArray(userClassIds)) {
+            console.error("getUserClasses() did not return an array");
+            return;
+        }
+        
         let done = 0, active = 0, missing = 0;
     
-    userClasses.forEach(code => {
-        if (classesDB[code]) {
-            classesDB[code].assignments.forEach(assignment => {
-                const dueDate = new Date(assignment.due);
-                const now = new Date();
-                now.setHours(0, 0, 0, 0);
-                dueDate.setHours(0, 0, 0, 0);
+        // Load assignments from Firestore classes
+        for (const classId of userClassIds) {
+            if (!classId) continue; // Skip undefined/null class IDs
+            
+            try {
+                const classDoc = await window.db.collection("classes").doc(classId).get();
                 
-                let status;
-                if (userType === "student") {
-                    const statusKey = `${loggedInUser}_${code}_${assignment.id}`;
-                    status = studentAssignmentsDB[statusKey] || "active";
-                    if (status === "active" && dueDate < now) {
-                        status = "missing";
-                        studentAssignmentsDB[statusKey] = "missing";
+                if (classDoc.exists) {
+                    const classData = classDoc.data();
+                    if (!classData) {
+                        console.error("Class data is null for classId:", classId);
+                        continue;
                     }
-                } else {
-                    status = "active"; // Teachers see all as active for management
+                    
+                    const assignments = Array.isArray(classData.assignments) ? classData.assignments : [];
+                    
+                    assignments.forEach(assignment => {
+                        if (!assignment || !assignment.id || !assignment.due) {
+                            return; // Skip invalid assignments
+                        }
+                        
+                        const dueDate = new Date(assignment.due);
+                        if (isNaN(dueDate.getTime())) {
+                            return; // Skip assignments with invalid dates
+                        }
+                        
+                        const now = new Date();
+                        now.setHours(0, 0, 0, 0);
+                        dueDate.setHours(0, 0, 0, 0);
+                        
+                        let status;
+                        if (userType === "student") {
+                            const statusKey = `${loggedInUser}_${classId}_${assignment.id}`;
+                            status = studentAssignmentsDB[statusKey] || "active";
+                            if (status === "active" && dueDate < now) {
+                                status = "missing";
+                                studentAssignmentsDB[statusKey] = "missing";
+                            }
+                        } else {
+                            status = "active"; // Teachers see all as active for management
+                        }
+                        
+                        if (status === "done") done++;
+                        else if (status === "active") active++;
+                        else if (status === "missing") missing++;
+                    });
                 }
-                
-                if (status === "done") done++;
-                else if (status === "active") active++;
-                else if (status === "missing") missing++;
-            });
+            } catch (error) {
+                console.error("Error loading class for pie chart, classId:", classId, error);
+                // Continue processing other classes even if one fails
+            }
         }
-    });
     
-    if (userType === "student") {
-        saveData(); // Save any auto-updated missing statuses
-    }
+        if (userType === "student") {
+            saveData(); // Save any auto-updated missing statuses
+        }
     
     const total = done + active + missing;
     const donePercent = total > 0 ? ((done / total) * 100).toFixed(1) : 0;
@@ -1082,7 +1510,7 @@ function nextMonth() {
     renderCalendar();
 }
 
-function renderCalendar() {
+async function renderCalendar() {
     const container = document.getElementById("calendarContainer");
     const monthYear = document.getElementById("monthYear");
     if (!container || !monthYear) return;
@@ -1114,32 +1542,69 @@ function renderCalendar() {
         container.appendChild(empty);
     }
     
-    // Get all assignments
+    // Get all assignments from Firestore
     try {
-        const userClasses = getUserClasses();
+        if (!window.db) {
+            console.error("Firestore not initialized for calendar");
+            return;
+        }
+        
+        const userClassIds = getUserClasses();
+        if (!Array.isArray(userClassIds)) {
+            console.error("getUserClasses() did not return an array for calendar");
+            return;
+        }
+        
         let assignmentsByDate = {};
     
-    userClasses.forEach(code => {
-        if (classesDB[code]) {
-            classesDB[code].assignments.forEach(assignment => {
-                const dueDate = new Date(assignment.due);
-                const dateKey = `${dueDate.getFullYear()}-${dueDate.getMonth()}-${dueDate.getDate()}`;
-                if (!assignmentsByDate[dateKey]) {
-                    assignmentsByDate[dateKey] = [];
+        // Load assignments from Firestore classes
+        for (const classId of userClassIds) {
+            if (!classId) continue; // Skip undefined/null class IDs
+            
+            try {
+                const classDoc = await window.db.collection("classes").doc(classId).get();
+                
+                if (classDoc.exists) {
+                    const classData = classDoc.data();
+                    if (!classData) {
+                        console.error("Class data is null for classId:", classId);
+                        continue;
+                    }
+                    
+                    const assignments = Array.isArray(classData.assignments) ? classData.assignments : [];
+                    const className = classData.className || "Unnamed Class";
+                    
+                    assignments.forEach(assignment => {
+                        if (!assignment || !assignment.id || !assignment.due || !assignment.name) {
+                            return; // Skip invalid assignments
+                        }
+                        
+                        const dueDate = new Date(assignment.due);
+                        if (isNaN(dueDate.getTime())) {
+                            return; // Skip assignments with invalid dates
+                        }
+                        
+                        const dateKey = `${dueDate.getFullYear()}-${dueDate.getMonth()}-${dueDate.getDate()}`;
+                        if (!assignmentsByDate[dateKey]) {
+                            assignmentsByDate[dateKey] = [];
+                        }
+                        let status = "active";
+                        if (userType === "student") {
+                            const statusKey = `${loggedInUser}_${classId}_${assignment.id}`;
+                            status = studentAssignmentsDB[statusKey] || "active";
+                        }
+                        assignmentsByDate[dateKey].push({
+                            name: assignment.name,
+                            className: className,
+                            status: status
+                        });
+                    });
                 }
-                let status = "active";
-                if (userType === "student") {
-                    const statusKey = `${loggedInUser}_${code}_${assignment.id}`;
-                    status = studentAssignmentsDB[statusKey] || "active";
-                }
-                assignmentsByDate[dateKey].push({
-                    name: assignment.name,
-                    className: classesDB[code].name,
-                    status: status
-                });
-            });
+            } catch (error) {
+                console.error("Error loading class for calendar, classId:", classId, error);
+                // Continue processing other classes even if one fails
+            }
         }
-    });
     
     // Days of the month
     for (let day = 1; day <= daysInMonth; day++) {
@@ -1191,34 +1656,63 @@ function renderCalendar() {
 }
 
 // ======= STATISTICS (Teachers Only) =======
-function renderStatistics() {
+async function renderStatistics() {
     if (userType !== "teacher") return;
     
     const container = document.getElementById("statisticsContainer");
     if (!container) return;
     
     try {
-        const userClasses = getUserClasses();
+        if (!window.db) {
+            container.innerHTML = "<p>Firestore not initialized. Please refresh the page.</p>";
+            return;
+        }
+        
+        const userClassIds = getUserClasses();
+        if (!Array.isArray(userClassIds)) {
+            container.innerHTML = "<p>Error loading classes. Please refresh the page.</p>";
+            return;
+        }
+        
         let html = '<div class="statistics-content">';
         
         // Class participation stats
         html += '<div class="class-stats-box">';
         html += '<h3>Class Participation</h3>';
         
-        if (userClasses.length === 0) {
+        if (userClassIds.length === 0) {
             html += '<p>No classes created yet.</p>';
         } else {
-            userClasses.forEach(code => {
-                if (classesDB[code]) {
-                    // Note: Student counting from Firestore would require additional query
-                    // For now, just show the class info
-                    html += `<div class="class-stat-item">`;
-                    html += `<h4>${classesDB[code].name}</h4>`;
-                    html += `<p><strong>Code:</strong> ${code}</p>`;
-                    html += `<p><strong>Assignments:</strong> ${classesDB[code].assignments.length}</p>`;
-                    html += `</div>`;
+            // Load classes from Firestore
+            for (const classId of userClassIds) {
+                if (!classId) continue; // Skip undefined/null class IDs
+                
+                try {
+                    const classDoc = await window.db.collection("classes").doc(classId).get();
+                    
+                    if (classDoc.exists) {
+                        const classData = classDoc.data();
+                        if (!classData) {
+                            console.error("Class data is null for classId:", classId);
+                            continue;
+                        }
+                        
+                        const assignments = Array.isArray(classData.assignments) ? classData.assignments : [];
+                        const students = Array.isArray(classData.students) ? classData.students : [];
+                        const className = classData.className || "Unnamed Class";
+                        
+                        html += `<div class="class-stat-item">`;
+                        html += `<h4>${className}</h4>`;
+                        html += `<p><strong>Code:</strong> ${classId}</p>`;
+                        html += `<p><strong>Students:</strong> ${students.length}</p>`;
+                        html += `<p><strong>Assignments:</strong> ${assignments.length}</p>`;
+                        html += `</div>`;
+                    }
+                } catch (error) {
+                    console.error("Error loading class for statistics, classId:", classId, error);
+                    // Continue processing other classes even if one fails
                 }
-            });
+            }
         }
         html += '</div>';
         
@@ -1236,31 +1730,60 @@ function renderStatistics() {
         if (canvas) {
             let done = 0, active = 0, missing = 0;
             
-            userClasses.forEach(code => {
-                if (classesDB[code]) {
-                    classesDB[code].assignments.forEach(assignment => {
-                        // For current user only (simplified for new structure)
-                        if (userType === "student") {
-                            const statusKey = `${loggedInUser}_${code}_${assignment.id}`;
-                            const status = studentAssignmentsDB[statusKey] || "active";
-                            
-                            const dueDate = new Date(assignment.due);
-                            const now = new Date();
-                            now.setHours(0, 0, 0, 0);
-                            dueDate.setHours(0, 0, 0, 0);
-                            
-                            let finalStatus = status;
-                            if (status === "active" && dueDate < now) {
-                                finalStatus = "missing";
+            // Load assignments from Firestore for chart
+            for (const classId of userClassIds) {
+                if (!classId) continue; // Skip undefined/null class IDs
+                
+                try {
+                    const classDoc = await window.db.collection("classes").doc(classId).get();
+                    
+                    if (classDoc.exists) {
+                        const classData = classDoc.data();
+                        if (!classData) {
+                            console.error("Class data is null for classId:", classId);
+                            continue;
+                        }
+                        
+                        const assignments = Array.isArray(classData.assignments) ? classData.assignments : [];
+                        
+                        assignments.forEach(assignment => {
+                            if (!assignment || !assignment.id || !assignment.due) {
+                                return; // Skip invalid assignments
                             }
                             
-                            if (finalStatus === "done") done++;
-                            else if (finalStatus === "active") active++;
-                            else if (finalStatus === "missing") missing++;
-                        }
-                    });
+                            // For current user only (simplified for new structure)
+                            if (userType === "student") {
+                                const statusKey = `${loggedInUser}_${classId}_${assignment.id}`;
+                                const status = studentAssignmentsDB[statusKey] || "active";
+                                
+                                const dueDate = new Date(assignment.due);
+                                if (isNaN(dueDate.getTime())) {
+                                    return; // Skip assignments with invalid dates
+                                }
+                                
+                                const now = new Date();
+                                now.setHours(0, 0, 0, 0);
+                                dueDate.setHours(0, 0, 0, 0);
+                                
+                                let finalStatus = status;
+                                if (status === "active" && dueDate < now) {
+                                    finalStatus = "missing";
+                                }
+                                
+                                if (finalStatus === "done") done++;
+                                else if (finalStatus === "active") active++;
+                                else if (finalStatus === "missing") missing++;
+                            } else {
+                                // Teachers see all assignments
+                                active++;
+                            }
+                        });
+                    }
+                } catch (error) {
+                    console.error("Error loading class for statistics chart, classId:", classId, error);
+                    // Continue processing other classes even if one fails
                 }
-            });
+            }
         
         if (statisticsChart) {
             statisticsChart.destroy();
@@ -1305,10 +1828,11 @@ function renderStatistics() {
 
 // ======= SUGGESTIONS =======
 function renderSuggestions() {
-    const container = document.getElementById("suggestionsContainer");
-    if (!container) return;
-    
-    if (userType === "student") {
+    try {
+        const container = document.getElementById("suggestionsContainer");
+        if (!container) return;
+        
+        if (userType === "student") {
         // Student view: submission form
         container.innerHTML = `
             <div class="suggestions-form">
@@ -1346,6 +1870,13 @@ function renderSuggestions() {
         }
         
         container.innerHTML += '</div>';
+    }
+    } catch (error) {
+        console.error("Error rendering suggestions:", error);
+        const container = document.getElementById("suggestionsContainer");
+        if (container) {
+            container.innerHTML = "<p style='text-align: center; color: #666; padding: 20px;'>Error loading suggestions. Please refresh the page.</p>";
+        }
     }
 }
 
