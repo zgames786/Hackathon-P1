@@ -209,8 +209,9 @@ async function updateAdminDashboard() {
                     return "Unknown";
                 }).filter(name => name !== "Unknown");
                 
+                const classId = doc.id;
                 html += `
-                    <div class="admin-class-item">
+                    <div class="admin-class-item" onclick="showClassDetails('${classId}')" style="cursor: pointer;">
                         <h4>${className}</h4>
                         <div class="class-stats">
                             <p><strong>Teacher:</strong> ${teacherName}</p>
@@ -221,6 +222,17 @@ async function updateAdminDashboard() {
                 `;
             });
             
+            // Add class detail panel container after the classes list
+            html += `
+                <div id="classDetailPanel" style="display: none; margin-top: 20px; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h3 id="classDetailTitle" style="color: #667eea; margin: 0;"></h3>
+                        <button onclick="closeClassDetails()" style="background: #666; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer;">Close</button>
+                    </div>
+                    <div id="classDetailContent"></div>
+                </div>
+            `;
+            
             classesList.innerHTML = html;
         } catch (error) {
             console.error("Error loading classes:", error);
@@ -228,6 +240,229 @@ async function updateAdminDashboard() {
         }
     }
 }
+
+// Show class details when a class is clicked
+async function showClassDetails(classId) {
+    if (!window.db) {
+        alert("Firestore not initialized. Please refresh the page.");
+        return;
+    }
+    
+    try {
+        const classDoc = await window.db.collection("classes").doc(classId).get();
+        
+        if (!classDoc.exists) {
+            alert("Class not found.");
+            return;
+        }
+        
+        const classData = classDoc.data();
+        const className = classData.className || "Unnamed Class";
+        const section = classData.section || "N/A";
+        const teacherName = classData.teacherName || "No Teacher";
+        const students = Array.isArray(classData.students) ? classData.students : [];
+        const studentCount = students.length;
+        
+        // Get the detail panel
+        const detailPanel = document.getElementById("classDetailPanel");
+        const detailTitle = document.getElementById("classDetailTitle");
+        const detailContent = document.getElementById("classDetailContent");
+        
+        if (!detailPanel || !detailTitle || !detailContent) {
+            console.error("Class detail panel elements not found");
+            return;
+        }
+        
+        // Update title
+        detailTitle.textContent = className;
+        
+        // Build detail content
+        let contentHtml = `
+            <div style="margin-bottom: 20px;">
+                <p><strong>Section:</strong> ${section}</p>
+                <p><strong>Teacher:</strong> ${teacherName}</p>
+                <p><strong>Total Students:</strong> ${studentCount}</p>
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+                <h4 style="color: #333; margin-bottom: 10px;">Enrolled Students:</h4>
+        `;
+        
+        if (students.length === 0) {
+            contentHtml += `<p style="color: #666; font-style: italic;">No students enrolled in this class.</p>`;
+        } else {
+            contentHtml += `<ul style="list-style: none; padding: 0;">`;
+            students.forEach((student, index) => {
+                const studentName = (student && typeof student === 'object' && student.name) ? student.name : "Unknown";
+                const studentUid = (student && typeof student === 'object' && student.uid) ? student.uid : "";
+                contentHtml += `
+                    <li style="padding: 10px; margin-bottom: 8px; background: #f5f5f5; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;">
+                        <span>${studentName}</span>
+                        <button onclick="removeStudentFromClass('${classId}', '${studentUid}', '${studentName.replace(/'/g, "\\'")}')" style="background: #dc3545; color: white; padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">Remove</button>
+                    </li>
+                `;
+            });
+            contentHtml += `</ul>`;
+        }
+        
+        contentHtml += `
+            </div>
+            
+            <div style="border-top: 2px solid #e0e0e0; padding-top: 20px; text-align: center;">
+                <button onclick="deleteClass('${classId}', '${className.replace(/'/g, "\\'")}')" style="background: #dc3545; color: white; padding: 12px 24px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; font-weight: 600;">
+                    Delete Class
+                </button>
+            </div>
+        `;
+        
+        detailContent.innerHTML = contentHtml;
+        detailPanel.style.display = "block";
+        
+        // Scroll to the detail panel
+        detailPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    } catch (error) {
+        console.error("Error loading class details:", error);
+        alert("Error loading class details. Please try again.");
+    }
+}
+
+// Close class details panel
+function closeClassDetails() {
+    const detailPanel = document.getElementById("classDetailPanel");
+    if (detailPanel) {
+        detailPanel.style.display = "none";
+    }
+}
+
+// Remove a student from a class
+async function removeStudentFromClass(classId, studentUid, studentName) {
+    if (!confirm(`Are you sure you want to remove ${studentName} from this class?`)) {
+        return;
+    }
+    
+    if (!window.db) {
+        alert("Firestore not initialized. Please refresh the page.");
+        return;
+    }
+    
+    try {
+        const classDoc = await window.db.collection("classes").doc(classId).get();
+        
+        if (!classDoc.exists) {
+            alert("Class not found.");
+            return;
+        }
+        
+        const classData = classDoc.data();
+        const students = Array.isArray(classData.students) ? classData.students : [];
+        
+        // Remove the student from the array
+        const updatedStudents = students.filter(student => {
+            if (student && typeof student === 'object') {
+                return student.uid !== studentUid;
+            }
+            return true;
+        });
+        
+        // Update the class document
+        await window.db.collection("classes").doc(classId).update({
+            students: updatedStudents
+        });
+        
+        // Also update the student's enrolledClasses in their user document
+        try {
+            const studentDoc = await window.db.collection("users").doc(studentUid).get();
+            if (studentDoc.exists) {
+                const studentData = studentDoc.data();
+                const enrolledClasses = Array.isArray(studentData.studentInfo?.enrolledClasses) 
+                    ? studentData.studentInfo.enrolledClasses 
+                    : [];
+                
+                const updatedEnrolledClasses = enrolledClasses.filter(id => id !== classId);
+                
+                await window.db.collection("users").doc(studentUid).update({
+                    "studentInfo.enrolledClasses": updatedEnrolledClasses
+                });
+            }
+        } catch (studentUpdateError) {
+            console.error("Error updating student's enrolled classes:", studentUpdateError);
+            // Continue even if student update fails
+        }
+        
+        alert(`${studentName} has been removed from the class.`);
+        
+        // Refresh class details and classes list
+        await showClassDetails(classId);
+        await updateAdminDashboard();
+    } catch (error) {
+        console.error("Error removing student from class:", error);
+        alert("Error removing student. Please try again.");
+    }
+}
+
+// Delete an entire class
+async function deleteClass(classId, className) {
+    if (!confirm(`Are you sure you want to delete the class "${className}"? This action cannot be undone.`)) {
+        return;
+    }
+    
+    if (!window.db) {
+        alert("Firestore not initialized. Please refresh the page.");
+        return;
+    }
+    
+    try {
+        // Get class data first to remove students from their enrolledClasses
+        const classDoc = await window.db.collection("classes").doc(classId).get();
+        
+        if (classDoc.exists) {
+            const classData = classDoc.data();
+            const students = Array.isArray(classData.students) ? classData.students : [];
+            
+            // Remove classId from each student's enrolledClasses
+            for (const student of students) {
+                if (student && typeof student === 'object' && student.uid) {
+                    try {
+                        const studentDoc = await window.db.collection("users").doc(student.uid).get();
+                        if (studentDoc.exists) {
+                            const studentData = studentDoc.data();
+                            const enrolledClasses = Array.isArray(studentData.studentInfo?.enrolledClasses) 
+                                ? studentData.studentInfo.enrolledClasses 
+                                : [];
+                            
+                            const updatedEnrolledClasses = enrolledClasses.filter(id => id !== classId);
+                            
+                            await window.db.collection("users").doc(student.uid).update({
+                                "studentInfo.enrolledClasses": updatedEnrolledClasses
+                            });
+                        }
+                    } catch (studentUpdateError) {
+                        console.error(`Error updating student ${student.uid}:`, studentUpdateError);
+                        // Continue with other students even if one fails
+                    }
+                }
+            }
+        }
+        
+        // Delete the class document
+        await window.db.collection("classes").doc(classId).delete();
+        
+        alert(`Class "${className}" has been deleted.`);
+        
+        // Close detail panel and refresh classes list
+        closeClassDetails();
+        await updateAdminDashboard();
+    } catch (error) {
+        console.error("Error deleting class:", error);
+        alert("Error deleting class. Please try again.");
+    }
+}
+
+// Make functions globally accessible
+window.showClassDetails = showClassDetails;
+window.closeClassDetails = closeClassDetails;
+window.removeStudentFromClass = removeStudentFromClass;
+window.deleteClass = deleteClass;
 
 // Update dashboard fees
 async function updateDashboardFees() {
