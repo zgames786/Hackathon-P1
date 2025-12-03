@@ -87,37 +87,29 @@ function displayAccounts(accounts) {
             }
         }
         
-        let additionalInfo = "";
-        if (account.role === "student") {
-            if (account.className || account.section) {
-                additionalInfo += `<p><strong>Class:</strong> ${account.className || "N/A"} ${account.section ? `(${account.section})` : ""}</p>`;
-            }
-            if (account.admissionNumber) {
-                additionalInfo += `<p><strong>Admission #:</strong> ${account.admissionNumber}</p>`;
-            }
-        } else if (account.role === "teacher") {
-            if (account.employeeId) {
-                additionalInfo += `<p><strong>Employee ID:</strong> ${account.employeeId}</p>`;
-            }
-        }
+        // Extract data from nested info objects (new unified schema)
+        const teacherInfo = account.teacherInfo || {};
+        const studentInfo = account.studentInfo || {};
         
         // Show password (plain text)
         const passwordDisplay = account.password ? `<p><strong>Password:</strong> ${account.password}</p>` : "";
         
-        // Show student-specific fields
+        // Show student-specific fields from studentInfo
         let studentFields = "";
         if (account.role === "student") {
-            if (account.className) studentFields += `<p><strong>Class:</strong> ${account.className}</p>`;
-            if (account.section) studentFields += `<p><strong>Section:</strong> ${account.section}</p>`;
-            if (account.admissionNumber) studentFields += `<p><strong>Admission Number:</strong> ${account.admissionNumber}</p>`;
-            if (account.parentPhone) studentFields += `<p><strong>Parent Phone:</strong> ${account.parentPhone}</p>`;
+            if (studentInfo.class) studentFields += `<p><strong>Class:</strong> ${studentInfo.class}</p>`;
+            if (studentInfo.section) studentFields += `<p><strong>Section:</strong> ${studentInfo.section}</p>`;
+            if (studentInfo.parentPhone) studentFields += `<p><strong>Parent Phone:</strong> ${studentInfo.parentPhone}</p>`;
         }
         
-        // Show teacher-specific fields
+        // Show teacher-specific fields from teacherInfo
         let teacherFields = "";
         if (account.role === "teacher") {
-            if (account.employeeId) teacherFields += `<p><strong>Employee ID:</strong> ${account.employeeId}</p>`;
+            // No employeeId in new schema, only fullName, phone, and classes
         }
+        
+        const fullName = account.role === "teacher" ? (teacherInfo.fullName || "") : (studentInfo.fullName || "");
+        const phone = account.role === "teacher" ? (teacherInfo.phone || "") : "";
         
         card.innerHTML = `
             <div class="account-card-header">
@@ -127,10 +119,10 @@ function displayAccounts(accounts) {
                 </div>
             </div>
             <div class="account-card-body">
-                ${account.fullName ? `<p><strong>Full Name:</strong> ${account.fullName}</p>` : ""}
+                ${fullName ? `<p><strong>Full Name:</strong> ${fullName}</p>` : ""}
                 ${studentFields}
                 ${teacherFields}
-                ${account.phone ? `<p><strong>Phone:</strong> ${account.phone}</p>` : ""}
+                ${phone ? `<p><strong>Phone:</strong> ${phone}</p>` : ""}
                 ${passwordDisplay}
                 <p><strong>Created:</strong> ${createdDate}</p>
             </div>
@@ -154,11 +146,13 @@ function applyFilters() {
         filteredAccounts = filteredAccounts.filter(acc => acc.role === roleFilter);
     }
     
-    // Apply search filter
+    // Apply search filter (check nested info objects)
     if (searchInput) {
         filteredAccounts = filteredAccounts.filter(acc => {
             const username = (acc.username || "").toLowerCase();
-            const fullName = (acc.fullName || "").toLowerCase();
+            const teacherInfo = acc.teacherInfo || {};
+            const studentInfo = acc.studentInfo || {};
+            const fullName = (acc.role === "teacher" ? (teacherInfo.fullName || "") : (studentInfo.fullName || "")).toLowerCase();
             return username.includes(searchInput) || fullName.includes(searchInput);
         });
     }
@@ -187,12 +181,16 @@ async function openEditForm(accountId) {
     // Update title
     modalTitle.textContent = `Edit ${account.role.charAt(0).toUpperCase() + account.role.slice(1)} Account`;
     
+    // Extract data from nested info objects (new unified schema)
+    const teacherInfo = account.teacherInfo || {};
+    const studentInfo = account.studentInfo || {};
+    
     // Populate form
     document.getElementById("editAccountId").value = accountId;
     document.getElementById("editUsername").value = account.username || "";
     document.getElementById("editRole").value = account.role || "";
-    document.getElementById("editFullName").value = account.fullName || "";
-    document.getElementById("editPhone").value = account.phone || "";
+    document.getElementById("editFullName").value = account.role === "teacher" ? (teacherInfo.fullName || "") : (studentInfo.fullName || "");
+    document.getElementById("editPhone").value = account.role === "teacher" ? (teacherInfo.phone || "") : "";
     
     // Hide all role-specific fields first
     document.getElementById("editClassNameGroup").style.display = "none";
@@ -201,20 +199,17 @@ async function openEditForm(accountId) {
     document.getElementById("editParentPhoneGroup").style.display = "none";
     document.getElementById("editEmployeeIdGroup").style.display = "none";
     
-    // Show role-specific fields and populate
+    // Show role-specific fields and populate from nested structure
     if (account.role === "student") {
         document.getElementById("editClassNameGroup").style.display = "block";
         document.getElementById("editSectionGroup").style.display = "block";
-        document.getElementById("editAdmissionNumberGroup").style.display = "block";
         document.getElementById("editParentPhoneGroup").style.display = "block";
         
-        document.getElementById("editClassName").value = account.className || "";
-        document.getElementById("editSection").value = account.section || "";
-        document.getElementById("editAdmissionNumber").value = account.admissionNumber || "";
-        document.getElementById("editParentPhone").value = account.parentPhone || "";
+        document.getElementById("editClassName").value = studentInfo.class || "";
+        document.getElementById("editSection").value = studentInfo.section || "";
+        document.getElementById("editParentPhone").value = studentInfo.parentPhone || "";
     } else if (account.role === "teacher") {
-        document.getElementById("editEmployeeIdGroup").style.display = "block";
-        document.getElementById("editEmployeeId").value = account.employeeId || "";
+        // No employeeId or other fields in new schema - teacherInfo only has fullName, phone, classes
     }
     
     // Clear password fields (for security, don't show current password)
@@ -293,31 +288,37 @@ async function updateUserAccount() {
             return;
         }
         
-        // Build update data (do not overwrite createdAt)
+        // Build update data with nested info objects (new unified schema)
         const updateData = {};
-        
-        if (fullName) updateData.fullName = fullName;
-        if (phone) updateData.phone = phone;
         
         // Update password if provided
         if (password) {
             updateData.password = password;
         }
         
-        // Add role-specific fields
+        // Update nested info objects
         if (account.role === "student") {
             const className = document.getElementById("editClassName").value.trim();
             const section = document.getElementById("editSection").value.trim();
-            const admissionNumber = document.getElementById("editAdmissionNumber").value.trim();
             const parentPhone = document.getElementById("editParentPhone").value.trim();
             
-            if (className !== undefined) updateData.className = className || null;
-            if (section !== undefined) updateData.section = section || null;
-            if (admissionNumber !== undefined) updateData.admissionNumber = admissionNumber || null;
-            if (parentPhone !== undefined) updateData.parentPhone = parentPhone || null;
+            // Get existing studentInfo or create new
+            const existingStudentInfo = account.studentInfo || {};
+            updateData.studentInfo = {
+                fullName: fullName || existingStudentInfo.fullName || "",
+                class: className || existingStudentInfo.class || "",
+                section: section || existingStudentInfo.section || "",
+                parentPhone: parentPhone || existingStudentInfo.parentPhone || "",
+                enrolledClasses: existingStudentInfo.enrolledClasses || []
+            };
         } else if (account.role === "teacher") {
-            const employeeId = document.getElementById("editEmployeeId").value.trim();
-            if (employeeId !== undefined) updateData.employeeId = employeeId || null;
+            // Get existing teacherInfo or create new
+            const existingTeacherInfo = account.teacherInfo || {};
+            updateData.teacherInfo = {
+                fullName: fullName || existingTeacherInfo.fullName || "",
+                phone: phone || existingTeacherInfo.phone || "",
+                classes: existingTeacherInfo.classes || []
+            };
         }
         
         // Update in Firestore

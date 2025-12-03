@@ -289,19 +289,13 @@ async function login() {
             clearLoginAttempts();
             loggedInUser = u;
             
-            // Store user data in localStorage for the session
-            const userSession = {
+            // Store entire user document in localStorage (with uid as document ID)
+            const userDocument = {
                 uid: userDoc.id,
-                username: userData.username,
-                role: userData.role,
-                fullName: userData.fullName || "",
-                className: userData.className || "",
-                section: userData.section || "",
-                admissionNumber: userData.admissionNumber || "",
-                employeeId: userData.employeeId || ""
+                ...userData
             };
             
-            localStorage.setItem("userSession", JSON.stringify(userSession));
+            localStorage.setItem("userSession", JSON.stringify(userDocument));
             localStorage.setItem("loggedInUser", userType + "_" + u);
             localStorage.setItem("userType", userType);
             

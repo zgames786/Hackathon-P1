@@ -260,8 +260,7 @@ async function createUserAccount() {
             return;
         }
         
-        // Create plain JSON userData object with only required fields
-        // No nested objects, no undefined fields
+        // Create userData object with new unified schema
         const userData = {
             username: username,
             password: password,
@@ -269,14 +268,24 @@ async function createUserAccount() {
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
         };
         
-        // Remove any undefined values to ensure clean JSON
-        Object.keys(userData).forEach(key => {
-            if (userData[key] === undefined) {
-                delete userData[key];
-            }
-        });
+        // Add role-specific nested info objects
+        if (currentAccountType === "teacher") {
+            userData.teacherInfo = {
+                fullName: fullName || "",
+                phone: phone || "",
+                classes: []
+            };
+        } else if (currentAccountType === "student") {
+            userData.studentInfo = {
+                fullName: fullName || "",
+                class: className || "",
+                section: section || "",
+                parentPhone: parentPhone || "",
+                enrolledClasses: []
+            };
+        }
         
-        console.log("User data to save (plain JSON):", { ...userData, password: "***" }); // Don't log password
+        console.log("User data to save (unified schema):", { ...userData, password: "***" }); // Don't log password
         
         // Write to Firestore users collection using modular SDK syntax
         // addDoc(collection(window.db, "users"), userData)

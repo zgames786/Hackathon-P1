@@ -80,11 +80,12 @@ async function loadAdminData() {
     }
     
     try {
-        // Load students
-        adminData.students = await getFirestoreDocs("students");
+        // Load all users from unified users collection
+        const allUsers = await getFirestoreDocs("users");
         
-        // Load teachers
-        adminData.teachers = await getFirestoreDocs("teachers");
+        // Filter students and teachers by role
+        adminData.students = allUsers.filter(user => user.role === "student");
+        adminData.teachers = allUsers.filter(user => user.role === "teacher");
         
         // Load classes
         adminData.classes = await getFirestoreDocs("classes");
@@ -149,7 +150,8 @@ async function updateAdminDashboard() {
                         
                         if (!teacherDoc.empty) {
                             const teacherData = teacherDoc.docs[0].data();
-                            teacherName = teacherData.fullName || teacherData.username || "Unknown";
+                            const teacherInfo = teacherData.teacherInfo || {};
+                            teacherName = teacherInfo.fullName || teacherData.username || "Unknown";
                         }
                     } catch (e) {
                         console.error("Error fetching teacher:", e);
@@ -167,7 +169,8 @@ async function updateAdminDashboard() {
                         studentsSnapshot.forEach(doc => {
                             if (studentUids.includes(doc.id)) {
                                 const studentData = doc.data();
-                                studentNames.push(studentData.fullName || studentData.username || "Unknown");
+                                const studentInfo = studentData.studentInfo || {};
+                                studentNames.push(studentInfo.fullName || studentData.username || "Unknown");
                             }
                         });
                     } catch (e) {
