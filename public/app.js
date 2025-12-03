@@ -503,9 +503,9 @@ window.onload = function() {
                 if (sidebar) {
                     const statsBtn = sidebar.querySelector('button[onclick*="statistics"]');
                     if (statsBtn) statsBtn.style.display = "block";
-                    // Hide Suggestions tab for teachers
+                    // Show Suggestions tab for teachers
                     const suggestionsBtn = sidebar.querySelector('button[onclick*="suggestions"]');
-                    if (suggestionsBtn) suggestionsBtn.style.display = "none";
+                    if (suggestionsBtn) suggestionsBtn.style.display = "block";
                 }
             } else {
                 document.getElementById("addAssignmentBtn").style.display = "none";
@@ -613,8 +613,8 @@ window.showTab = async function(tab) {
                 } else if (tab === "statistics") {
                     await renderStatistics();
                 } else if (tab === "suggestions") {
-                    // Only render suggestions for students (teachers don't have access)
-                    if (userType === "student") {
+                    // Render suggestions for both students and teachers
+                    if (userType === "student" || userType === "teacher") {
                         renderSuggestions();
                     }
                 }
@@ -1838,8 +1838,8 @@ function renderSuggestions() {
         const container = document.getElementById("suggestionsContainer");
         if (!container) return;
         
-        // Only show student submission form - teachers no longer have access
-        if (userType === "student") {
+        // Show submission form for both students and teachers
+        if (userType === "student" || userType === "teacher") {
             container.innerHTML = `
                 <div class="suggestions-form">
                     <p style="text-align: center; color: #666; font-size: 18px; margin-bottom: 20px;">
@@ -1863,8 +1863,13 @@ function renderSuggestions() {
     }
 }
 
-function submitSuggestion() {
-    if (userType !== "student") return;
+async function submitSuggestion() {
+    if (userType !== "student" && userType !== "teacher") return;
+    
+    if (!window.db) {
+        showError("Firestore not initialized. Please refresh the page.");
+        return;
+    }
     
     const textarea = document.getElementById("suggestionText");
     if (!textarea) return;
@@ -1875,15 +1880,36 @@ function submitSuggestion() {
         return;
     }
     
-    const suggestion = {
-        id: Date.now().toString(),
-        studentUsername: loggedInUser,
-        suggestion: suggestionText,
-        timestamp: new Date().toISOString()
-    };
-    
-    suggestionsDB.push(suggestion);
-    saveData();
-    showSuccess("Thank you for your suggestion!");
-    textarea.value = "";
+    try {
+        const userData = getCurrentUserData();
+        if (!userData || !userData.uid) {
+            showError("User data not found. Please log in again.");
+            return;
+        }
+        
+        // Get user's name based on role
+        let fromName = userData.username || "Unknown";
+        if (userData.role === "teacher" && userData.teacherInfo?.fullName) {
+            fromName = userData.teacherInfo.fullName;
+        } else if (userData.role === "student" && userData.studentInfo?.fullName) {
+            fromName = userData.studentInfo.fullName;
+        }
+        
+        // Create suggestion document with new schema
+        const suggestionData = {
+            text: suggestionText,
+            fromUserId: userData.uid,
+            fromName: fromName,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        };
+        
+        // Save to Firestore
+        await window.db.collection("suggestions").add(suggestionData);
+        
+        showSuccess("Thank you for your suggestion!");
+        textarea.value = "";
+    } catch (error) {
+        console.error("Error submitting suggestion:", error);
+        showError("Error submitting suggestion. Please try again.");
+    }
 }
