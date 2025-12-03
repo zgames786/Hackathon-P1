@@ -6,6 +6,11 @@ let adminData = {
     classes: []
 };
 
+// Chart instances - global variables to track chart instances
+let dashboardFeesChart = null;
+let dashboardAttendanceChart = null;
+let isRenderingCharts = false;
+
 // Make adminData globally accessible
 window.adminData = adminData;
 
@@ -543,49 +548,79 @@ function updateRecentActivity() {
 
 // Render dashboard charts
 function renderDashboardCharts() {
-    // Fees chart
-    const feesCtx = document.getElementById("dashboardFeesChart");
-    if (feesCtx && window.Chart) {
-        // This will be updated with actual data when fees are loaded
-        new Chart(feesCtx, {
-            type: 'doughnut',
-            data: {
-                labels: ['Pending', 'Collected'],
-                datasets: [{
-                    data: [0, 0],
-                    backgroundColor: ['#ffc107', '#28a745']
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true
-            }
-        });
+    // Prevent concurrent chart rendering
+    if (isRenderingCharts) {
+        console.warn("Chart rendering already in progress. Skipping duplicate call.");
+        return;
     }
     
-    // Attendance chart
-    const attendanceCtx = document.getElementById("dashboardAttendanceChart");
-    if (attendanceCtx && window.Chart) {
-        new Chart(attendanceCtx, {
-            type: 'bar',
-            data: {
-                labels: ['Present', 'Absent'],
-                datasets: [{
-                    label: 'Today',
-                    data: [0, 0],
-                    backgroundColor: ['#28a745', '#dc3545']
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                scales: {
-                    y: {
-                        beginAtZero: true
+    if (!window.Chart) {
+        console.warn("Chart.js not loaded. Skipping chart rendering.");
+        return;
+    }
+    
+    isRenderingCharts = true;
+    
+    try {
+        // Fees chart
+        const feesCtx = document.getElementById("dashboardFeesChart");
+        if (feesCtx) {
+            // Destroy existing chart instance if it exists
+            if (dashboardFeesChart) {
+                dashboardFeesChart.destroy();
+                dashboardFeesChart = null;
+            }
+            
+            // Create new chart instance
+            dashboardFeesChart = new Chart(feesCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Pending', 'Collected'],
+                    datasets: [{
+                        data: [0, 0],
+                        backgroundColor: ['#ffc107', '#28a745']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true
+                }
+            });
+        }
+        
+        // Attendance chart
+        const attendanceCtx = document.getElementById("dashboardAttendanceChart");
+        if (attendanceCtx) {
+            // Destroy existing chart instance if it exists
+            if (dashboardAttendanceChart) {
+                dashboardAttendanceChart.destroy();
+                dashboardAttendanceChart = null;
+            }
+            
+            // Create new chart instance
+            dashboardAttendanceChart = new Chart(attendanceCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Present', 'Absent'],
+                    datasets: [{
+                        label: 'Today',
+                        data: [0, 0],
+                        backgroundColor: ['#28a745', '#dc3545']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
                     }
                 }
-            }
-        });
+            });
+        }
+    } finally {
+        isRenderingCharts = false;
     }
 }
 
