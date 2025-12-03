@@ -91,7 +91,7 @@ async function loadAdminData() {
         adminData.classes = await getFirestoreDocs("classes");
         
         // Update dashboard
-        updateAdminDashboard();
+        await updateAdminDashboard();
     } catch (error) {
         console.error("Error loading admin data:", error);
         alert("Error loading data from Firestore. Please check your connection.");
@@ -100,13 +100,13 @@ async function loadAdminData() {
 
 // Update admin dashboard with data
 async function updateAdminDashboard() {
-    // Update total students
-    const totalStudents = adminData.students.length;
+    // Update total students - count from filtered array
+    const totalStudents = adminData.students ? adminData.students.length : 0;
     const totalStudentsEl = document.getElementById("totalStudents");
     if (totalStudentsEl) totalStudentsEl.textContent = totalStudents;
     
-    // Update total teachers
-    const totalTeachers = adminData.teachers.length;
+    // Update total teachers - count from filtered array
+    const totalTeachers = adminData.teachers ? adminData.teachers.length : 0;
     const totalTeachersEl = document.getElementById("totalTeachers");
     if (totalTeachersEl) totalTeachersEl.textContent = totalTeachers;
     

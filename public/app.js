@@ -131,6 +131,65 @@ async function loadAdminUIDs() {
 // ======= LOGIN & ACCOUNT =======
 let selectedRole = null; // Store selected role globally
 
+// Helper function to get current user data from localStorage (unified structure)
+function getCurrentUserData() {
+    try {
+        const userSessionStr = localStorage.getItem("userSession");
+        if (!userSessionStr) return null;
+        return JSON.parse(userSessionStr);
+    } catch (e) {
+        console.error("Error parsing userSession:", e);
+        return null;
+    }
+}
+
+// Helper function to get user classes from unified structure
+function getUserClasses() {
+    const userData = getCurrentUserData();
+    if (!userData) return [];
+    
+    if (userData.role === "teacher") {
+        return userData.teacherInfo?.classes || [];
+    } else if (userData.role === "student") {
+        return userData.studentInfo?.enrolledClasses || [];
+    }
+    return [];
+}
+
+// Helper function to update user classes in localStorage and Firestore
+async function updateUserClasses(classes) {
+    const userData = getCurrentUserData();
+    if (!userData) return false;
+    
+    try {
+        if (userData.role === "teacher") {
+            userData.teacherInfo = userData.teacherInfo || {};
+            userData.teacherInfo.classes = classes;
+        } else if (userData.role === "student") {
+            userData.studentInfo = userData.studentInfo || {};
+            userData.studentInfo.enrolledClasses = classes;
+        }
+        
+        // Update localStorage
+        localStorage.setItem("userSession", JSON.stringify(userData));
+        
+        // Update Firestore if db is available
+        if (window.db && userData.uid) {
+            const updateData = {};
+            if (userData.role === "teacher") {
+                updateData.teacherInfo = userData.teacherInfo;
+            } else if (userData.role === "student") {
+                updateData.studentInfo = userData.studentInfo;
+            }
+            await window.db.collection("users").doc(userData.uid).update(updateData);
+        }
+        return true;
+    } catch (e) {
+        console.error("Error updating user classes:", e);
+        return false;
+    }
+}
+
 function selectRole(role) {
     selectedRole = role;
     userType = role;
@@ -517,43 +576,59 @@ window.showTab = function(tab) {
 };
 
 // ======= CLASSES =======
-function joinClass() {
+async function joinClass() {
     if (userType !== "student") {
         showError("Only students can join classes");
         return;
     }
     let code = prompt("Enter class code:").trim().toUpperCase();
     if (!code) return;
-    if (classesDB[code]) {
-        if (!usersDB[userType][loggedInUser].classes.includes(code)) {
-            usersDB[userType][loggedInUser].classes.push(code);
-            saveData();
-            showSuccess("Joined class: " + classesDB[code].name);
-            renderClasses();
-            renderPieChart();
+    
+    try {
+        if (classesDB[code]) {
+            const userClasses = getUserClasses();
+            if (!userClasses.includes(code)) {
+                userClasses.push(code);
+                await updateUserClasses(userClasses);
+                showSuccess("Joined class: " + classesDB[code].name);
+                renderClasses();
+                renderPieChart();
+            } else {
+                showError("You are already in this class");
+            }
         } else {
-            showError("You are already in this class");
+            showError("Class code not found");
         }
-    } else {
-        showError("Class code not found");
+    } catch (error) {
+        console.error("Error joining class:", error);
+        showError("Error joining class. Please try again.");
     }
 }
 
-function createClass() {
+async function createClass() {
     if (userType !== "teacher") {
         showError("Only teachers can create classes");
         return;
     }
     let name = prompt("Enter class name:").trim();
     if (!name) return;
-    let code = generateClassCode();
-    classesDB[code] = {name: name, teacher: loggedInUser, assignments: []};
-    if (!usersDB[userType][loggedInUser].classes.includes(code)) {
-        usersDB[userType][loggedInUser].classes.push(code);
+    
+    try {
+        let code = generateClassCode();
+        classesDB[code] = {name: name, teacher: loggedInUser, assignments: []};
+        
+        const userClasses = getUserClasses();
+        if (!userClasses.includes(code)) {
+            userClasses.push(code);
+            await updateUserClasses(userClasses);
+        }
+        saveData();
+        showSuccess("Class created! Code: " + code);
+        renderClasses();
+    } catch (error) {
+        console.error("Error creating class:", error);
+        showError("Error creating class. Please try again.");
     }
-    saveData();
-    showSuccess("Class created! Code: " + code);
-    renderClasses();
 }
 
 function generateClassCode() {
@@ -567,24 +642,30 @@ function generateClassCode() {
 function renderClasses() {
     const container = document.getElementById("classesContainer");
     if (!container) return;
-    const userClasses = usersDB[userType][loggedInUser].classes || [];
-    if (userClasses.length === 0) {
-        container.innerHTML = "<p>No classes yet. " + (userType === "teacher" ? "Create" : "Join") + " a class to get started!</p>";
-        return;
-    }
-    container.innerHTML = "<h3>Your Classes</h3>";
-    userClasses.forEach(code => {
-        if (classesDB[code]) {
-            const classDiv = document.createElement("div");
-            classDiv.className = "class-card";
-            classDiv.innerHTML = `
-                <h4>${classesDB[code].name}</h4>
-                <p>Code: <strong>${code}</strong></p>
-                <p>Assignments: ${classesDB[code].assignments.length}</p>
-            `;
-            container.appendChild(classDiv);
+    
+    try {
+        const userClasses = getUserClasses();
+        if (userClasses.length === 0) {
+            container.innerHTML = "<p>No classes yet. " + (userType === "teacher" ? "Create" : "Join") + " a class to get started!</p>";
+            return;
         }
-    });
+        container.innerHTML = "<h3>Your Classes</h3>";
+        userClasses.forEach(code => {
+            if (classesDB[code]) {
+                const classDiv = document.createElement("div");
+                classDiv.className = "class-card";
+                classDiv.innerHTML = `
+                    <h4>${classesDB[code].name}</h4>
+                    <p>Code: <strong>${code}</strong></p>
+                    <p>Assignments: ${classesDB[code].assignments.length}</p>
+                `;
+                container.appendChild(classDiv);
+            }
+        });
+    } catch (error) {
+        console.error("Error rendering classes:", error);
+        container.innerHTML = "<p>Error loading classes. Please refresh the page.</p>";
+    }
 }
 
 // ======= ASSIGNMENTS =======
@@ -618,8 +699,9 @@ function renderAssignments() {
     assignmentsList.id = "assignmentsList";
     container.appendChild(assignmentsList);
     
-    const userClasses = usersDB[userType][loggedInUser].classes || [];
-    let allAssignments = [];
+    try {
+        const userClasses = getUserClasses();
+        let allAssignments = [];
     
     userClasses.forEach(code => {
         if (classesDB[code]) {
@@ -674,25 +756,32 @@ function renderAssignments() {
         return;
     }
     
-    allAssignments.sort((a, b) => new Date(a.due) - new Date(b.due));
-    
-    allAssignments.forEach(assignment => {
-        const assignmentDiv = document.createElement("div");
-        assignmentDiv.className = "assignment-card";
-        const dueDate = new Date(assignment.due);
-        const formattedDate = `${String(dueDate.getMonth() + 1).padStart(2, '0')}/${String(dueDate.getDate()).padStart(2, '0')}/${dueDate.getFullYear()}`;
-        assignmentDiv.innerHTML = `
-            <div class="assignment-header">
-                <h4>${assignment.name}</h4>
-                ${userType === "teacher" ? `<button onclick="editAssignment('${assignment.classCode}', '${assignment.id}')" class="edit-btn">✏️</button>
-                <button onclick="deleteAssignment('${assignment.classCode}', '${assignment.id}')" class="delete-btn">🗑️</button>` : ""}
-            </div>
-            <p><strong>Class:</strong> ${assignment.className}</p>
-            <p><strong>Due:</strong> ${formattedDate}</p>
-            ${userType === "student" && assignment.status !== "done" ? `<button onclick="updateAssignmentStatus('${assignment.classCode}', '${assignment.id}', 'done')" class="status-btn">Mark as Done</button>` : ""}
-        `;
-        listContainer.appendChild(assignmentDiv);
-    });
+        allAssignments.sort((a, b) => new Date(a.due) - new Date(b.due));
+        
+        allAssignments.forEach(assignment => {
+            const assignmentDiv = document.createElement("div");
+            assignmentDiv.className = "assignment-card";
+            const dueDate = new Date(assignment.due);
+            const formattedDate = `${String(dueDate.getMonth() + 1).padStart(2, '0')}/${String(dueDate.getDate()).padStart(2, '0')}/${dueDate.getFullYear()}`;
+            assignmentDiv.innerHTML = `
+                <div class="assignment-header">
+                    <h4>${assignment.name}</h4>
+                    ${userType === "teacher" ? `<button onclick="editAssignment('${assignment.classCode}', '${assignment.id}')" class="edit-btn">✏️</button>
+                    <button onclick="deleteAssignment('${assignment.classCode}', '${assignment.id}')" class="delete-btn">🗑️</button>` : ""}
+                </div>
+                <p><strong>Class:</strong> ${assignment.className}</p>
+                <p><strong>Due:</strong> ${formattedDate}</p>
+                ${userType === "student" && assignment.status !== "done" ? `<button onclick="updateAssignmentStatus('${assignment.classCode}', '${assignment.id}', 'done')" class="status-btn">Mark as Done</button>` : ""}
+            `;
+            listContainer.appendChild(assignmentDiv);
+        });
+    } catch (error) {
+        console.error("Error rendering assignments:", error);
+        const listContainer = document.getElementById("assignmentsList");
+        if (listContainer) {
+            listContainer.innerHTML = "<p style='text-align: center; color: #666; padding: 20px;'>Error loading assignments. Please refresh the page.</p>";
+        }
+    }
 }
 
 function addAssignment() {
@@ -700,13 +789,14 @@ function addAssignment() {
         showError("Only teachers can add assignments");
         return;
     }
-    const userClasses = usersDB[userType][loggedInUser].classes || [];
-    if (userClasses.length === 0) {
-        showError("You need to create a class first");
-        return;
-    }
-    
-    let classCode = prompt("Enter class code:").trim().toUpperCase();
+    try {
+        const userClasses = getUserClasses();
+        if (userClasses.length === 0) {
+            showError("You need to create a class first");
+            return;
+        }
+        
+        let classCode = prompt("Enter class code:").trim().toUpperCase();
     if (!classCode || !classesDB[classCode]) {
         showError("Invalid class code");
         return;
@@ -751,11 +841,15 @@ function addAssignment() {
         name: name,
         due: dueDate.toISOString()
     });
-    saveData();
-    showSuccess("Assignment added!");
-    renderAssignments();
-    renderPieChart();
-    renderCalendar();
+        saveData();
+        showSuccess("Assignment added!");
+        renderAssignments();
+        renderPieChart();
+        renderCalendar();
+    } catch (error) {
+        console.error("Error adding assignment:", error);
+        showError("Error adding assignment. Please try again.");
+    }
 }
 
 function editAssignment(classCode, assignmentId) {
@@ -866,8 +960,9 @@ function renderPieChart() {
     const canvas = document.getElementById("piechart");
     if (!canvas) return;
     
-    const userClasses = usersDB[userType][loggedInUser].classes || [];
-    let done = 0, active = 0, missing = 0;
+    try {
+        const userClasses = getUserClasses();
+        let done = 0, active = 0, missing = 0;
     
     userClasses.forEach(code => {
         if (classesDB[code]) {
@@ -957,6 +1052,10 @@ function renderPieChart() {
             </div>
         `;
     }
+    } catch (error) {
+        console.error("Error rendering pie chart:", error);
+        // Silently handle error - don't show alert
+    }
 }
 
 // ======= CALENDAR =======
@@ -1016,8 +1115,9 @@ function renderCalendar() {
     }
     
     // Get all assignments
-    const userClasses = usersDB[userType][loggedInUser].classes || [];
-    let assignmentsByDate = {};
+    try {
+        const userClasses = getUserClasses();
+        let assignmentsByDate = {};
     
     userClasses.forEach(code => {
         if (classesDB[code]) {
@@ -1084,6 +1184,10 @@ function renderCalendar() {
         
         container.appendChild(dayDiv);
     }
+    } catch (error) {
+        console.error("Error rendering calendar:", error);
+        // Silently handle error - don't show alert
+    }
 }
 
 // ======= STATISTICS (Teachers Only) =======
@@ -1093,59 +1197,51 @@ function renderStatistics() {
     const container = document.getElementById("statisticsContainer");
     if (!container) return;
     
-    const userClasses = usersDB[userType][loggedInUser].classes || [];
-    let html = '<div class="statistics-content">';
-    
-    // Class participation stats
-    html += '<div class="class-stats-box">';
-    html += '<h3>Class Participation</h3>';
-    
-    if (userClasses.length === 0) {
-        html += '<p>No classes created yet.</p>';
-    } else {
-        userClasses.forEach(code => {
-            if (classesDB[code]) {
-                // Count students in this class
-                let studentCount = 0;
-                Object.keys(usersDB.student).forEach(studentUsername => {
-                    if (usersDB.student[studentUsername].classes && 
-                        usersDB.student[studentUsername].classes.includes(code)) {
-                        studentCount++;
-                    }
-                });
-                
-                html += `<div class="class-stat-item">`;
-                html += `<h4>${classesDB[code].name}</h4>`;
-                html += `<p><strong>Students:</strong> ${studentCount}</p>`;
-                html += `<p><strong>Code:</strong> ${code}</p>`;
-                html += `</div>`;
-            }
-        });
-    }
-    html += '</div>';
-    
-    // Assignment status bar chart
-    html += '<div class="assignment-stats-box">';
-    html += '<h3>Assignment Status Overview</h3>';
-    html += '<canvas id="statisticsChart"></canvas>';
-    html += '</div>';
-    
-    html += '</div>';
-    container.innerHTML = html;
-    
-    // Render bar chart
-    const canvas = document.getElementById("statisticsChart");
-    if (canvas) {
-        let done = 0, active = 0, missing = 0;
+    try {
+        const userClasses = getUserClasses();
+        let html = '<div class="statistics-content">';
         
-        userClasses.forEach(code => {
-            if (classesDB[code]) {
-                classesDB[code].assignments.forEach(assignment => {
-                    // Count statuses across all students
-                    Object.keys(usersDB.student).forEach(studentUsername => {
-                        if (usersDB.student[studentUsername].classes && 
-                            usersDB.student[studentUsername].classes.includes(code)) {
-                            const statusKey = `${studentUsername}_${code}_${assignment.id}`;
+        // Class participation stats
+        html += '<div class="class-stats-box">';
+        html += '<h3>Class Participation</h3>';
+        
+        if (userClasses.length === 0) {
+            html += '<p>No classes created yet.</p>';
+        } else {
+            userClasses.forEach(code => {
+                if (classesDB[code]) {
+                    // Note: Student counting from Firestore would require additional query
+                    // For now, just show the class info
+                    html += `<div class="class-stat-item">`;
+                    html += `<h4>${classesDB[code].name}</h4>`;
+                    html += `<p><strong>Code:</strong> ${code}</p>`;
+                    html += `<p><strong>Assignments:</strong> ${classesDB[code].assignments.length}</p>`;
+                    html += `</div>`;
+                }
+            });
+        }
+        html += '</div>';
+        
+        // Assignment status bar chart
+        html += '<div class="assignment-stats-box">';
+        html += '<h3>Assignment Status Overview</h3>';
+        html += '<canvas id="statisticsChart"></canvas>';
+        html += '</div>';
+        
+        html += '</div>';
+        container.innerHTML = html;
+        
+        // Render bar chart
+        const canvas = document.getElementById("statisticsChart");
+        if (canvas) {
+            let done = 0, active = 0, missing = 0;
+            
+            userClasses.forEach(code => {
+                if (classesDB[code]) {
+                    classesDB[code].assignments.forEach(assignment => {
+                        // For current user only (simplified for new structure)
+                        if (userType === "student") {
+                            const statusKey = `${loggedInUser}_${code}_${assignment.id}`;
                             const status = studentAssignmentsDB[statusKey] || "active";
                             
                             const dueDate = new Date(assignment.due);
@@ -1163,9 +1259,8 @@ function renderStatistics() {
                             else if (finalStatus === "missing") missing++;
                         }
                     });
-                });
-            }
-        });
+                }
+            });
         
         if (statisticsChart) {
             statisticsChart.destroy();
@@ -1199,6 +1294,12 @@ function renderStatistics() {
                 }
             }
         });
+    }
+    } catch (error) {
+        console.error("Error rendering statistics:", error);
+        if (container) {
+            container.innerHTML = "<p style='text-align: center; color: #666; padding: 20px;'>Error loading statistics. Please refresh the page.</p>";
+        }
     }
 }
 
