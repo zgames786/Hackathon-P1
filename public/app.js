@@ -503,6 +503,9 @@ window.onload = function() {
                 if (sidebar) {
                     const statsBtn = sidebar.querySelector('button[onclick*="statistics"]');
                     if (statsBtn) statsBtn.style.display = "block";
+                    // Hide Suggestions tab for teachers
+                    const suggestionsBtn = sidebar.querySelector('button[onclick*="suggestions"]');
+                    if (suggestionsBtn) suggestionsBtn.style.display = "none";
                 }
             } else {
                 document.getElementById("addAssignmentBtn").style.display = "none";
@@ -610,7 +613,10 @@ window.showTab = async function(tab) {
                 } else if (tab === "statistics") {
                     await renderStatistics();
                 } else if (tab === "suggestions") {
-                    renderSuggestions(); // Keep sync if it's not async
+                    // Only render suggestions for students (teachers don't have access)
+                    if (userType === "student") {
+                        renderSuggestions();
+                    }
                 }
             } catch (renderError) {
                 // Log render errors but don't show alert - tab should still switch
@@ -1832,45 +1838,22 @@ function renderSuggestions() {
         const container = document.getElementById("suggestionsContainer");
         if (!container) return;
         
+        // Only show student submission form - teachers no longer have access
         if (userType === "student") {
-        // Student view: submission form
-        container.innerHTML = `
-            <div class="suggestions-form">
-                <p style="text-align: center; color: #666; font-size: 18px; margin-bottom: 20px;">
-                    Leave a suggestion below for our school application, we will try our best to take your ideas into consideration!
-                </p>
-                <textarea id="suggestionText" placeholder="Enter your suggestion here..." rows="6" style="width: 100%; padding: 15px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 16px; font-family: inherit; box-sizing: border-box; resize: vertical;"></textarea>
-                <div style="text-align: center; margin-top: 20px;">
-                    <button onclick="submitSuggestion()" style="background: #667eea; color: white; padding: 15px 40px; font-size: 18px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600;">
-                        Submit
-                    </button>
-                </div>
-            </div>
-        `;
-    } else {
-        // Teacher view: list of suggestions
-        container.innerHTML = '<div class="suggestions-list">';
-        
-        if (suggestionsDB.length === 0) {
-            container.innerHTML += '<p style="text-align: center; color: #666; font-size: 18px; padding: 40px;">No suggestions submitted yet.</p>';
-        } else {
-            suggestionsDB.forEach((suggestion, index) => {
-                const date = new Date(suggestion.timestamp);
-                const formattedDate = date.toLocaleDateString("en-US", {year: "numeric", month: "short", day: "numeric"});
-                container.innerHTML += `
-                    <div class="suggestion-item">
-                        <div class="suggestion-header">
-                            <strong>${suggestion.studentUsername}</strong>
-                            <span style="color: #666; font-size: 14px;">${formattedDate}</span>
-                        </div>
-                        <p class="suggestion-text">${suggestion.suggestion}</p>
+            container.innerHTML = `
+                <div class="suggestions-form">
+                    <p style="text-align: center; color: #666; font-size: 18px; margin-bottom: 20px;">
+                        Leave a suggestion below for our school application, we will try our best to take your ideas into consideration!
+                    </p>
+                    <textarea id="suggestionText" placeholder="Enter your suggestion here..." rows="6" style="width: 100%; padding: 15px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 16px; font-family: inherit; box-sizing: border-box; resize: vertical;"></textarea>
+                    <div style="text-align: center; margin-top: 20px;">
+                        <button onclick="submitSuggestion()" style="background: #667eea; color: white; padding: 15px 40px; font-size: 18px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600;">
+                            Submit
+                        </button>
                     </div>
-                `;
-            });
+                </div>
+            `;
         }
-        
-        container.innerHTML += '</div>';
-    }
     } catch (error) {
         console.error("Error rendering suggestions:", error);
         const container = document.getElementById("suggestionsContainer");

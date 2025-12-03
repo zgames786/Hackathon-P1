@@ -364,7 +364,7 @@ window.showAdminTab = function(tab) {
         }
         
         // Hide all tabs
-        const tabIds = ["dashboardTab", "communicationTab", "feesTab", "expensesTab", "transportTab", "reportsTab", "attendanceTab", "adminTab", "helpTab"];
+        const tabIds = ["dashboardTab", "communicationTab", "feesTab", "expensesTab", "transportTab", "reportsTab", "attendanceTab", "adminTab", "suggestionsTab", "helpTab"];
         tabIds.forEach(t => {
             const element = document.getElementById(t);
             if (element) {
@@ -386,6 +386,8 @@ window.showAdminTab = function(tab) {
                 window.loadAttendanceData();
             } else if (tab === "admin" && window.renderManagementInterface) {
                 window.renderManagementInterface();
+            } else if (tab === "suggestions") {
+                loadSuggestions();
             }
         }
     } catch (error) {
@@ -393,12 +395,152 @@ window.showAdminTab = function(tab) {
     }
 };
 
+// Load and display suggestions from Firestore
+async function loadSuggestions() {
+    // Create suggestions tab container if it doesn't exist
+    let suggestionsTab = document.getElementById("suggestionsTab");
+    if (!suggestionsTab) {
+        // Find the help tab to insert before it
+        const helpTab = document.getElementById("helpTab");
+        if (helpTab && helpTab.parentNode) {
+            suggestionsTab = document.createElement("div");
+            suggestionsTab.id = "suggestionsTab";
+            suggestionsTab.style.display = "none";
+            helpTab.parentNode.insertBefore(suggestionsTab, helpTab);
+        }
+    }
+    
+    // Ensure the container exists
+    let suggestionsContainer = document.getElementById("suggestionsContainer");
+    if (!suggestionsContainer && suggestionsTab) {
+        suggestionsTab.innerHTML = `
+            <h2 style="text-align: center; color: #667eea; margin-bottom: 20px;">Suggestions</h2>
+            <div id="suggestionsContainer"></div>
+        `;
+        suggestionsContainer = document.getElementById("suggestionsContainer");
+    }
+    
+    if (!suggestionsContainer) {
+        console.error("Could not create suggestions container");
+        return;
+    }
+    
+    if (!window.db) {
+        suggestionsContainer.innerHTML = "<p style='text-align: center; color: #666; padding: 20px;'>Firestore not initialized. Please refresh the page.</p>";
+        return;
+    }
+    
+    try {
+        // Load all suggestions from Firestore
+        const suggestionsSnapshot = await window.db.collection("suggestions").get();
+        
+        if (suggestionsSnapshot.empty) {
+            suggestionsContainer.innerHTML = "<p style='text-align: center; color: #666; padding: 40px;'>No suggestions submitted yet.</p>";
+            return;
+        }
+        
+        let html = '<div class="suggestions-list">';
+        
+        suggestionsSnapshot.forEach((doc) => {
+            const suggestionData = doc.data();
+            const suggestionId = doc.id;
+            
+            // Extract fields
+            const studentName = suggestionData.studentName || suggestionData.studentUsername || "Unknown Student";
+            const message = suggestionData.message || suggestionData.suggestion || "";
+            const timestamp = suggestionData.timestamp || suggestionData.createdAt || "";
+            
+            // Format timestamp
+            let formattedDate = "Unknown date";
+            if (timestamp) {
+                try {
+                    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+                    formattedDate = date.toLocaleDateString("en-US", {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit"
+                    });
+                } catch (e) {
+                    console.error("Error formatting date:", e);
+                }
+            }
+            
+            html += `
+                <div class="suggestion-item" style="background: white; padding: 20px; margin-bottom: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                    <div class="suggestion-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <strong style="font-size: 16px; color: #333;">${studentName}</strong>
+                        <span style="color: #666; font-size: 14px;">${formattedDate}</span>
+                    </div>
+                    <p class="suggestion-text" style="color: #555; line-height: 1.6; margin-bottom: 10px;">${message}</p>
+                    <div style="text-align: right;">
+                        <button onclick="deleteSuggestion('${suggestionId}')" style="background: #dc3545; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">
+                            Delete
+                        </button>
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += '</div>';
+        suggestionsContainer.innerHTML = html;
+    } catch (error) {
+        console.error("Error loading suggestions:", error);
+        suggestionsContainer.innerHTML = "<p style='text-align: center; color: #dc3545; padding: 20px;'>Error loading suggestions. Please refresh the page.</p>";
+    }
+}
+
+// Delete a suggestion from Firestore
+async function deleteSuggestion(suggestionId) {
+    if (!confirm("Are you sure you want to delete this suggestion?")) {
+        return;
+    }
+    
+    if (!window.db) {
+        showError("Firestore not initialized. Please refresh the page.");
+        return;
+    }
+    
+    try {
+        await window.db.collection("suggestions").doc(suggestionId).delete();
+        
+        // Reload suggestions after deletion
+        await loadSuggestions();
+        
+        // Show success message (using alert since showSuccess might not be defined)
+        alert("Suggestion deleted successfully.");
+    } catch (error) {
+        console.error("Error deleting suggestion:", error);
+        alert("Error deleting suggestion. Please try again.");
+    }
+}
+
+// Make deleteSuggestion globally accessible
+window.deleteSuggestion = deleteSuggestion;
+
 // Initialize admin page
 window.onload = async function() {
     if (window.location.pathname.includes("admin.html")) {
         const hasAccess = await checkAdminAccess();
         if (!hasAccess) {
             return;
+        }
+        
+        // Create Suggestions sidebar button if it doesn't exist
+        const sidebar = document.getElementById("sidebar");
+        if (sidebar) {
+            let suggestionsBtn = sidebar.querySelector('button[onclick*="suggestions"]');
+            if (!suggestionsBtn) {
+                // Find the Accounts button to insert after it
+                const accountsBtn = sidebar.querySelector('button[onclick*="accounts"]');
+                if (accountsBtn && accountsBtn.parentNode) {
+                    suggestionsBtn = document.createElement("button");
+                    suggestionsBtn.textContent = "💡 Suggestions";
+                    suggestionsBtn.setAttribute("onclick", "navigateToAdminTab('suggestions')");
+                    accountsBtn.parentNode.insertBefore(suggestionsBtn, accountsBtn.nextSibling);
+                }
+            }
         }
         
         // Display admin username or UID
