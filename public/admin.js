@@ -657,7 +657,6 @@ window.showAdminTab = function(tab) {
             } else if (tab === "admin" && window.renderManagementInterface) {
                 window.renderManagementInterface();
             } else if (tab === "suggestions") {
-                ensureSuggestionsContainer();
                 loadSuggestions();
             }
         }
@@ -668,67 +667,59 @@ window.showAdminTab = function(tab) {
 
 // Load and display suggestions from Firestore
 async function loadSuggestions() {
-    // Ensure container exists first
-    ensureSuggestionsContainer();
-    
-    let suggestionsContainer = document.getElementById("suggestionsContainer");
-    if (!suggestionsContainer) {
-        console.error("Could not access suggestions container");
-        return;
+    // Get or create suggestionsList element
+    let suggestionsList = document.getElementById("suggestionsList");
+    if (!suggestionsList) {
+        const suggestionsTab = document.getElementById("suggestionsTab");
+        if (suggestionsTab) {
+            suggestionsList = document.createElement("div");
+            suggestionsList.id = "suggestionsList";
+            suggestionsTab.appendChild(suggestionsList);
+        } else {
+            console.error("Could not find suggestionsTab");
+            return;
+        }
     }
     
     if (!window.db) {
-        suggestionsContainer.innerHTML = "<p style='text-align: center; color: #666; padding: 20px;'>Firestore not initialized. Please refresh the page.</p>";
+        suggestionsList.innerHTML = "<p style='text-align: center; color: #666; padding: 20px;'>Firestore not initialized. Please refresh the page.</p>";
         return;
     }
     
     try {
-        // Show loading state
-        suggestionsContainer.innerHTML = "<p style='text-align: center; color: #666; padding: 20px;'>Loading suggestions...</p>";
+        suggestionsList.innerHTML = "<p style='text-align: center; color: #666; padding: 20px;'>Loading suggestions...</p>";
         
-        // Load all suggestions from Firestore
         const suggestionsSnapshot = await window.db.collection("suggestions").get();
         
         if (suggestionsSnapshot.empty) {
-            suggestionsContainer.innerHTML = "<p style='text-align: center; color: #666; padding: 40px;'>No suggestions submitted yet.</p>";
+            suggestionsList.innerHTML = "<p style='text-align: center; color: #666; padding: 40px;'>No suggestions submitted yet.</p>";
             return;
         }
         
-        let html = '<div class="suggestions-list">';
-        
-        // Convert to array and sort by timestamp (newest first)
         const suggestionsArray = [];
         suggestionsSnapshot.forEach((doc) => {
-            const suggestionData = doc.data();
-            suggestionsArray.push({
-                id: doc.id,
-                data: suggestionData
-            });
+            const data = doc.data();
+            suggestionsArray.push({ id: doc.id, ...data });
         });
         
         // Sort by timestamp (newest first)
         suggestionsArray.sort((a, b) => {
-            const aTime = a.data.timestamp ? (a.data.timestamp.toDate ? a.data.timestamp.toDate().getTime() : new Date(a.data.timestamp).getTime()) : 0;
-            const bTime = b.data.timestamp ? (b.data.timestamp.toDate ? b.data.timestamp.toDate().getTime() : new Date(b.data.timestamp).getTime()) : 0;
+            const aTime = a.timestamp ? (a.timestamp.toDate ? a.timestamp.toDate().getTime() : new Date(a.timestamp).getTime()) : 0;
+            const bTime = b.timestamp ? (b.timestamp.toDate ? b.timestamp.toDate().getTime() : new Date(b.timestamp).getTime()) : 0;
             return bTime - aTime;
         });
         
-        // Render each suggestion
-        suggestionsArray.forEach(({ id, data }) => {
-            const suggestionData = data;
-            const suggestionId = id;
+        let html = "";
+        suggestionsArray.forEach((suggestion) => {
+            const name = suggestion.fromName || suggestion.studentName || suggestion.studentUsername || "Unknown";
+            const message = suggestion.text || suggestion.message || suggestion.suggestion || "";
+            const timestamp = suggestion.timestamp || suggestion.createdAt || null;
             
-            // Extract fields using new schema: text, fromUserId, fromName, timestamp
-            const text = suggestionData.text || suggestionData.message || suggestionData.suggestion || "";
-            const fromName = suggestionData.fromName || suggestionData.studentName || suggestionData.studentUsername || "Unknown";
-            const timestamp = suggestionData.timestamp || suggestionData.createdAt || null;
-            
-            // Format timestamp
-            let formattedDate = "Unknown date";
+            let date = "Unknown date";
             if (timestamp) {
                 try {
-                    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-                    formattedDate = date.toLocaleDateString("en-US", {
+                    const dateObj = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+                    date = dateObj.toLocaleDateString("en-US", {
                         year: "numeric",
                         month: "short",
                         day: "numeric",
@@ -741,55 +732,24 @@ async function loadSuggestions() {
             }
             
             html += `
-                <div class="suggestion-item" style="background: white; padding: 20px; margin-bottom: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                    <div class="suggestion-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                        <strong style="font-size: 16px; color: #333;">${fromName}</strong>
-                        <span style="color: #666; font-size: 14px;">${formattedDate}</span>
+                <div style="background: white; padding: 20px; margin-bottom: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <strong style="font-size: 16px; color: #333;">${name}</strong>
+                        <span style="color: #666; font-size: 14px;">${date}</span>
                     </div>
-                    <p class="suggestion-text" style="color: #555; line-height: 1.6; margin-bottom: 10px; white-space: pre-wrap;">${text}</p>
+                    <p style="color: #555; line-height: 1.6; margin-bottom: 10px; white-space: pre-wrap;">${message}</p>
                     <div style="text-align: right;">
-                        <button onclick="deleteSuggestion('${suggestionId}')" style="background: #dc3545; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">
-                            Delete
-                        </button>
+                        <button onclick="deleteSuggestion('${suggestion.id}')" style="background: #dc3545; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">Delete</button>
                     </div>
                 </div>
             `;
         });
         
-        html += '</div>';
-        suggestionsContainer.innerHTML = html;
+        suggestionsList.innerHTML = html;
     } catch (error) {
         console.error("Error loading suggestions:", error);
-        const errorMsg = error.message || "Unknown error";
-        if (suggestionsContainer) {
-            suggestionsContainer.innerHTML = `<p style='text-align: center; color: #dc3545; padding: 20px;'>Error loading suggestions: ${errorMsg}. Please refresh the page.</p>`;
-        }
+        suggestionsList.innerHTML = "<p style='text-align: center; color: #dc3545; padding: 20px;'>Error loading suggestions. Please refresh the page.</p>";
     }
-}
-
-// Ensure suggestions container persists - re-attach if missing
-function ensureSuggestionsContainer() {
-    let container = document.getElementById("suggestionsContainer");
-    if (!container) {
-        let suggestionsTab = document.getElementById("suggestionsTab");
-        if (!suggestionsTab) {
-            // Create suggestions tab if it doesn't exist
-            const helpTab = document.getElementById("helpTab");
-            if (helpTab && helpTab.parentNode) {
-                suggestionsTab = document.createElement("div");
-                suggestionsTab.id = "suggestionsTab";
-                suggestionsTab.style.display = "none";
-                helpTab.parentNode.insertBefore(suggestionsTab, helpTab);
-            }
-        }
-        if (suggestionsTab) {
-            suggestionsTab.innerHTML = `
-                <h2 style="text-align: center; color: #667eea; margin-bottom: 20px;">Suggestions</h2>
-                <div id="suggestionsContainer"></div>
-            `;
-        }
-    }
-    return container;
 }
 
 // Delete a suggestion from Firestore
