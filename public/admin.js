@@ -667,18 +667,10 @@ window.showAdminTab = function(tab) {
 
 // Load and display suggestions from Firestore
 async function loadSuggestions() {
-    // Get or create suggestionsList element
-    let suggestionsList = document.getElementById("suggestionsList");
+    const suggestionsList = document.getElementById("suggestionsList");
     if (!suggestionsList) {
-        const suggestionsTab = document.getElementById("suggestionsTab");
-        if (suggestionsTab) {
-            suggestionsList = document.createElement("div");
-            suggestionsList.id = "suggestionsList";
-            suggestionsTab.appendChild(suggestionsList);
-        } else {
-            console.error("Could not find suggestionsTab");
-            return;
-        }
+        console.error("Could not find suggestionsList element");
+        return;
     }
     
     if (!window.db) {
@@ -732,7 +724,7 @@ async function loadSuggestions() {
             }
             
             html += `
-                <div style="background: white; padding: 20px; margin-bottom: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                <div style="background: #f8f9fa; padding: 20px; margin-bottom: 15px; border-radius: 8px; border: 1px solid #e0e0e0;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                         <strong style="font-size: 16px; color: #333;">${studentName}</strong>
                         <span style="color: #666; font-size: 14px;">${date}</span>
@@ -774,6 +766,44 @@ async function deleteSuggestion(suggestionId) {
     } catch (error) {
         console.error("Error deleting suggestion:", error);
         alert("Error deleting suggestion. Please try again.");
+    }
+}
+
+// Delete all suggestions from Firestore
+async function deleteAllSuggestions() {
+    if (!confirm("Are you sure you want to delete ALL suggestions? This action cannot be undone.")) {
+        return;
+    }
+    
+    if (!window.db) {
+        alert("Firestore not initialized. Please refresh the page.");
+        return;
+    }
+    
+    try {
+        // Get all suggestions
+        const suggestionsSnapshot = await window.db.collection("suggestions").get();
+        
+        if (suggestionsSnapshot.empty) {
+            alert("No suggestions to delete.");
+            return;
+        }
+        
+        // Delete all documents in batch
+        const batch = window.db.batch();
+        suggestionsSnapshot.forEach((doc) => {
+            batch.delete(doc.ref);
+        });
+        
+        await batch.commit();
+        
+        // Reload suggestions after deletion
+        await loadSuggestions();
+        
+        alert(`Successfully deleted ${suggestionsSnapshot.size} suggestion(s).`);
+    } catch (error) {
+        console.error("Error deleting all suggestions:", error);
+        alert("Error deleting all suggestions. Please try again.");
     }
 }
 

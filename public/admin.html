@@ -21,6 +21,7 @@
   <button onclick="navigateTo('attendance.html')">✅ Attendance</button>
   <button onclick="navigateTo('account-creation.html')">➕ Account Creation</button>
   <button onclick="navigateTo('accounts.html')">👥 Accounts</button>
+  <button onclick="navigateToAdminTab('suggestions')">💡 Suggestions</button>
   <button onclick="navigateToAdminTab('help')">❓ Help</button>
   <button onclick="logout()">🚪 Logout</button>
 </div>
@@ -117,6 +118,19 @@
 
 <div id="adminTab" style="display:none;">
   <!-- Management content will be loaded by management.js -->
+</div>
+
+<div id="suggestionsTab" style="display:none;">
+  <h2 style="text-align: center; color: #667eea; margin-bottom: 20px;">TNHA School App - Suggestions</h2>
+  <div style="background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 1200px; margin: 0 auto;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+      <h3 style="color: #333; margin: 0;">Student Suggestions</h3>
+      <button onclick="deleteAllSuggestions()" style="background: #dc3545; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600;">
+        Delete All Suggestions
+      </button>
+    </div>
+    <div id="suggestionsList"></div>
+  </div>
 </div>
 
 <div id="helpTab" style="display:none;">
