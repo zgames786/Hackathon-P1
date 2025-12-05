@@ -1895,10 +1895,10 @@ async function submitSuggestion() {
         
         // Create suggestion document with required schema
         const suggestionData = {
-            message: suggestionText,
+            text: suggestionText,
             studentUid: userData.uid,
             studentName: studentName,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
         };
         
         // Save to Firestore

@@ -73,6 +73,20 @@ service cloud.firestore {
       allow read, write: if hasAdminAuth();
     }
     
+    // Suggestions collection
+    match /suggestions/{suggestionId} {
+      // Students can create suggestions (they don't use Firebase Auth, so allow creates)
+      // Validate that required fields are present: text, studentUid, timestamp
+      allow create: if request.resource.data.keys().hasAll(['text', 'studentUid', 'timestamp']) &&
+                    request.resource.data.text is string &&
+                    request.resource.data.studentUid is string;
+      
+      // Students cannot read, update, or delete suggestions
+      allow read: if hasAdminAuth();
+      allow update: if false;
+      allow delete: if hasAdminAuth();
+    }
+    
     // Deny all other requests by default
     match /{document=**} {
       allow read, write: if false;

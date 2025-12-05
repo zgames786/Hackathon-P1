@@ -694,18 +694,18 @@ async function loadSuggestions() {
             suggestionsArray.push({ id: doc.id, ...data });
         });
         
-        // Sort by createdAt (newest first)
+        // Sort by timestamp (newest first)
         suggestionsArray.sort((a, b) => {
-            const aTime = a.createdAt ? (a.createdAt.toDate ? a.createdAt.toDate().getTime() : new Date(a.createdAt).getTime()) : 0;
-            const bTime = b.createdAt ? (b.createdAt.toDate ? b.createdAt.toDate().getTime() : new Date(b.createdAt).getTime()) : 0;
+            const aTime = a.timestamp ? (a.timestamp.toDate ? a.timestamp.toDate().getTime() : new Date(a.timestamp).getTime()) : 0;
+            const bTime = b.timestamp ? (b.timestamp.toDate ? b.timestamp.toDate().getTime() : new Date(b.timestamp).getTime()) : 0;
             return bTime - aTime;
         });
         
         let html = "";
         suggestionsArray.forEach((suggestion) => {
             const studentName = suggestion.studentName || "Unknown student";
-            const message = suggestion.message || "";
-            const timestamp = suggestion.createdAt || null;
+            const text = suggestion.text || "";
+            const timestamp = suggestion.timestamp || null;
             
             let date = "Unknown date";
             if (timestamp) {
@@ -729,7 +729,7 @@ async function loadSuggestions() {
                         <strong style="font-size: 16px; color: #333;">${studentName}</strong>
                         <span style="color: #666; font-size: 14px;">${date}</span>
                     </div>
-                    <p style="color: #555; line-height: 1.6; margin-bottom: 10px; white-space: pre-wrap;">${message}</p>
+                    <p style="color: #555; line-height: 1.6; margin-bottom: 10px; white-space: pre-wrap;">${text}</p>
                     <div style="text-align: right;">
                         <button onclick="deleteSuggestion('${suggestion.id}')" style="background: #dc3545; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">Delete</button>
                     </div>
