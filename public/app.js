@@ -613,8 +613,8 @@ window.showTab = async function(tab) {
                 } else if (tab === "statistics") {
                     await renderStatistics();
                 } else if (tab === "suggestions") {
-                    // Render suggestions for both students and teachers
-                    if (userType === "student" || userType === "teacher") {
+                    // Render suggestions for students only
+                    if (userType === "student") {
                         renderSuggestions();
                     }
                 }
@@ -1838,8 +1838,8 @@ function renderSuggestions() {
         const container = document.getElementById("suggestionsContainer");
         if (!container) return;
         
-        // Show submission form for both students and teachers
-        if (userType === "student" || userType === "teacher") {
+        // Show submission form for students only
+        if (userType === "student") {
             container.innerHTML = `
                 <div class="suggestions-form">
                     <p style="text-align: center; color: #666; font-size: 18px; margin-bottom: 20px;">
@@ -1864,7 +1864,10 @@ function renderSuggestions() {
 }
 
 async function submitSuggestion() {
-    if (userType !== "student" && userType !== "teacher") return;
+    if (userType !== "student") {
+        showError("Only students can submit suggestions.");
+        return;
+    }
     
     if (!window.db) {
         showError("Firestore not initialized. Please refresh the page.");
@@ -1887,20 +1890,15 @@ async function submitSuggestion() {
             return;
         }
         
-        // Get user's name based on role
-        let fromName = userData.username || "Unknown";
-        if (userData.role === "teacher" && userData.teacherInfo?.fullName) {
-            fromName = userData.teacherInfo.fullName;
-        } else if (userData.role === "student" && userData.studentInfo?.fullName) {
-            fromName = userData.studentInfo.fullName;
-        }
+        // Get student name if available
+        const studentName = userData.studentInfo?.fullName || userData.username || null;
         
-        // Create suggestion document with new schema
+        // Create suggestion document with required schema
         const suggestionData = {
-            text: suggestionText,
-            fromUserId: userData.uid,
-            fromName: fromName,
-            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            message: suggestionText,
+            studentUid: userData.uid,
+            studentName: studentName,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
         };
         
         // Save to Firestore

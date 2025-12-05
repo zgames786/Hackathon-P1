@@ -702,18 +702,18 @@ async function loadSuggestions() {
             suggestionsArray.push({ id: doc.id, ...data });
         });
         
-        // Sort by timestamp (newest first)
+        // Sort by createdAt (newest first)
         suggestionsArray.sort((a, b) => {
-            const aTime = a.timestamp ? (a.timestamp.toDate ? a.timestamp.toDate().getTime() : new Date(a.timestamp).getTime()) : 0;
-            const bTime = b.timestamp ? (b.timestamp.toDate ? b.timestamp.toDate().getTime() : new Date(b.timestamp).getTime()) : 0;
+            const aTime = a.createdAt ? (a.createdAt.toDate ? a.createdAt.toDate().getTime() : new Date(a.createdAt).getTime()) : 0;
+            const bTime = b.createdAt ? (b.createdAt.toDate ? b.createdAt.toDate().getTime() : new Date(b.createdAt).getTime()) : 0;
             return bTime - aTime;
         });
         
         let html = "";
         suggestionsArray.forEach((suggestion) => {
-            const name = suggestion.fromName || suggestion.studentName || suggestion.studentUsername || "Unknown";
-            const message = suggestion.text || suggestion.message || suggestion.suggestion || "";
-            const timestamp = suggestion.timestamp || suggestion.createdAt || null;
+            const studentName = suggestion.studentName || "Unknown student";
+            const message = suggestion.message || "";
+            const timestamp = suggestion.createdAt || null;
             
             let date = "Unknown date";
             if (timestamp) {
@@ -734,7 +734,7 @@ async function loadSuggestions() {
             html += `
                 <div style="background: white; padding: 20px; margin-bottom: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                        <strong style="font-size: 16px; color: #333;">${name}</strong>
+                        <strong style="font-size: 16px; color: #333;">${studentName}</strong>
                         <span style="color: #666; font-size: 14px;">${date}</span>
                     </div>
                     <p style="color: #555; line-height: 1.6; margin-bottom: 10px; white-space: pre-wrap;">${message}</p>
