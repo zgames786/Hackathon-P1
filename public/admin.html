@@ -6,6 +6,7 @@
 <title>TNHA School App - Admin Dashboard</title>
 <link rel="stylesheet" href="style.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 
@@ -14,7 +15,7 @@
 <div id="sidebar">
   <button onclick="navigateToAdminTab('dashboard')">🏠 Dashboard</button>
   <button onclick="navigateToAdminTab('communication')">💬 Communication</button>
-  <button onclick="navigateTo('fees.html')">💰 Fees</button>
+  <button onclick="navigateToAdminTab('fees')">💰 Fees</button>
   <button onclick="navigateToAdminTab('expenses')">📊 Expenses</button>
   <button onclick="navigateToAdminTab('transport')">🚌 Transport</button>
   <button onclick="navigateToAdminTab('reports')">📈 Reports</button>
@@ -88,7 +89,65 @@
 </div>
 
 <div id="feesTab" style="display:none;">
-  <!-- Fees content will be loaded by fees.js -->
+  <h2 style="text-align: center; color: #667eea; margin-bottom: 20px;">Fees Management</h2>
+  <div style="padding: 20px; max-width: 100%;">
+    <div style="margin-bottom: 20px; text-align: center;">
+      <input type="file" id="excelUploadInput" accept=".xlsx,.xls" style="display: none;" onchange="handleExcelUpload(event)">
+      <button onclick="document.getElementById('excelUploadInput').click()" style="background: #667eea; color: white; padding: 12px 24px; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: 600;">
+        📤 Upload Excel
+      </button>
+    </div>
+    <div id="feesTableContainer" style="overflow-x: auto; border: 1px solid #ddd; border-radius: 8px; max-height: 70vh;">
+      <table id="feesTable" style="width: 100%; border-collapse: collapse; min-width: 3000px;">
+        <thead>
+          <tr style="background: #667eea; color: white; position: sticky; top: 0; z-index: 10;">
+            <th style="padding: 12px; border: 1px solid #ddd; text-align: left; font-weight: 600;">Rs</th>
+            <th style="padding: 12px; border: 1px solid #ddd; text-align: left; font-weight: 600;">Balance</th>
+            <th style="padding: 12px; border: 1px solid #ddd; text-align: left; font-weight: 600;">Bal %</th>
+            <th style="padding: 12px; border: 1px solid #ddd; text-align: left; font-weight: 600;">Scholar Unique Id</th>
+            <th style="padding: 12px; border: 1px solid #ddd; text-align: left; font-weight: 600;">Student First Name</th>
+            <th style="padding: 12px; border: 1px solid #ddd; text-align: left; font-weight: 600;">Student Last Name</th>
+            <th style="padding: 12px; border: 1px solid #ddd; text-align: left; font-weight: 600;">DOB</th>
+            <th style="padding: 12px; border: 1px solid #ddd; text-align: left; font-weight: 600;">Father Full Name</th>
+            <th style="padding: 12px; border: 1px solid #ddd; text-align: left; font-weight: 600;">Mother Full Name</th>
+            <th style="padding: 12px; border: 1px solid #ddd; text-align: left; font-weight: 600;">Status</th>
+            <th style="padding: 12px; border: 1px solid #ddd; text-align: left; font-weight: 600;">Grade</th>
+            <th style="padding: 12px; border: 1px solid #ddd; text-align: left; font-weight: 600;">Section/Stream</th>
+            <th style="padding: 12px; border: 1px solid #ddd; text-align: left; font-weight: 600;">Mobile No. 1</th>
+            <th style="padding: 12px; border: 1px solid #ddd; text-align: left; font-weight: 600;">Mobile No. 2</th>
+            <th style="padding: 12px; border: 1px solid #ddd; text-align: left; font-weight: 600;">Village/Town</th>
+            <th style="padding: 12px; border: 1px solid #ddd; text-align: left; font-weight: 600;">RTE/Discounts Type</th>
+            <th style="padding: 12px; border: 1px solid #ddd; text-align: left; font-weight: 600;">Yearly Total charges WO Transport</th>
+            <th style="padding: 12px; border: 1px solid #ddd; text-align: left; font-weight: 600;">Year Total Charge</th>
+            <th style="padding: 12px; border: 1px solid #ddd; text-align: left; font-weight: 600;">Yearly Discount</th>
+            <th style="padding: 12px; border: 1px solid #ddd; text-align: left; font-weight: 600;">Payable charge</th>
+            <th style="padding: 12px; border: 1px solid #ddd; text-align: left; font-weight: 600;">Monthly Fees</th>
+            <th style="padding: 12px; border: 1px solid #ddd; text-align: left; font-weight: 600;">Monthly Transport Fee</th>
+            <th style="padding: 12px; border: 1px solid #ddd; text-align: left; font-weight: 600;">Transportation Indicator</th>
+            <th style="padding: 12px; border: 1px solid #ddd; text-align: left; font-weight: 600;">Veh Number</th>
+            <th style="padding: 12px; border: 1px solid #ddd; text-align: left; font-weight: 600;">Initial Charges</th>
+            <th style="padding: 12px; border: 1px solid #ddd; text-align: left; font-weight: 600;">Adm. Date</th>
+            <th style="padding: 12px; border: 1px solid #ddd; text-align: left; font-weight: 600;">April</th>
+            <th style="padding: 12px; border: 1px solid #ddd; text-align: left; font-weight: 600;">May</th>
+            <th style="padding: 12px; border: 1px solid #ddd; text-align: left; font-weight: 600;">June</th>
+            <th style="padding: 12px; border: 1px solid #ddd; text-align: left; font-weight: 600;">July</th>
+            <th style="padding: 12px; border: 1px solid #ddd; text-align: left; font-weight: 600;">Aug</th>
+            <th style="padding: 12px; border: 1px solid #ddd; text-align: left; font-weight: 600;">Sep</th>
+            <th style="padding: 12px; border: 1px solid #ddd; text-align: left; font-weight: 600;">Oct</th>
+            <th style="padding: 12px; border: 1px solid #ddd; text-align: left; font-weight: 600;">Nov</th>
+            <th style="padding: 12px; border: 1px solid #ddd; text-align: left; font-weight: 600;">Dec</th>
+            <th style="padding: 12px; border: 1px solid #ddd; text-align: left; font-weight: 600;">Jan</th>
+            <th style="padding: 12px; border: 1px solid #ddd; text-align: left; font-weight: 600;">Feb</th>
+            <th style="padding: 12px; border: 1px solid #ddd; text-align: left; font-weight: 600;">March</th>
+            <th style="padding: 12px; border: 1px solid #ddd; text-align: left; font-weight: 600;">Bal as of Oct 2025</th>
+          </tr>
+        </thead>
+        <tbody id="feesTableBody">
+          <!-- Empty rows will be generated here -->
+        </tbody>
+      </table>
+    </div>
+  </div>
 </div>
 
 <div id="expensesTab" style="display:none;">
@@ -151,6 +210,225 @@
 <script src="fees.js"></script>
 <script src="attendance.js"></script>
 <script src="management.js"></script>
+
+<script>
+// ======= FEES TABLE WITH EXCEL UPLOAD =======
+
+// Column headers in exact order
+const feesColumns = [
+  'Rs', 'Balance', 'Bal %', 'Scholar Unique Id', 'Student First Name', 'Student Last Name',
+  'DOB', 'Father Full Name', 'Mother Full Name', 'Status', 'Grade', 'Section/Stream',
+  'Mobile No. 1', 'Mobile No. 2', 'Village/Town', 'RTE/Discounts Type',
+  'Yearly Total charges WO Transport', 'Year Total Charge', 'Yearly Discount', 'Payable charge',
+  'Monthly Fees', 'Monthly Transport Fee', 'Transportation Indicator', 'Veh Number',
+  'Initial Charges', 'Adm. Date', 'April', 'May', 'June', 'July', 'Aug', 'Sep', 'Oct',
+  'Nov', 'Dec', 'Jan', 'Feb', 'March', 'Bal as of Oct 2025'
+];
+
+// Initialize table with 3 empty rows
+function initializeFeesTable() {
+  const tbody = document.getElementById('feesTableBody');
+  if (!tbody) return;
+  
+  tbody.innerHTML = '';
+  for (let i = 0; i < 3; i++) {
+    const row = document.createElement('tr');
+    feesColumns.forEach((col, index) => {
+      const cell = document.createElement('td');
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.style.cssText = 'width: 100%; padding: 8px; border: none; outline: none; background: transparent;';
+      input.addEventListener('blur', function() {
+        this.style.background = 'transparent';
+      });
+      input.addEventListener('focus', function() {
+        this.style.background = '#f0f0f0';
+      });
+      cell.appendChild(input);
+      cell.style.cssText = 'padding: 8px; border: 1px solid #ddd;';
+      row.appendChild(cell);
+    });
+    tbody.appendChild(row);
+  }
+}
+
+// Handle Excel file upload
+function handleExcelUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const workbook = XLSX.read(data, { type: 'array' });
+      
+      // Get first sheet
+      const firstSheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[firstSheetName];
+      
+      // Convert to JSON with header row
+      const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+      
+      if (jsonData.length === 0) {
+        alert('Excel file is empty');
+        return;
+      }
+
+      // First row might be headers - try to match with our column headers
+      let startRow = 0;
+      let headerRow = null;
+      const firstRow = jsonData[0] || [];
+      
+      // Check if first row looks like headers (contains text matching our columns)
+      const firstRowText = firstRow.map(c => String(c || '').trim().toLowerCase()).join(' ');
+      let headerMap = {}; // Maps our column names to Excel column indices
+      let hasHeaders = false;
+      
+      // Try to match headers
+      feesColumns.forEach((ourCol) => {
+        const ourColLower = ourCol.toLowerCase();
+        const headerIndex = firstRow.findIndex(h => {
+          const headerText = String(h || '').trim().toLowerCase();
+          // Try exact match or partial match
+          return headerText === ourColLower || 
+                 headerText.includes(ourColLower) || 
+                 ourColLower.includes(headerText);
+        });
+        if (headerIndex >= 0) {
+          headerMap[ourCol] = headerIndex;
+          hasHeaders = true;
+        } else {
+          // If no match, map by index (fallback)
+          const index = feesColumns.indexOf(ourCol);
+          headerMap[ourCol] = index;
+        }
+      });
+      
+      if (hasHeaders) {
+        startRow = 1; // Skip header row
+        headerRow = firstRow;
+      }
+
+      // Map Excel data to our columns
+      const rows = [];
+      for (let i = startRow; i < jsonData.length; i++) {
+        const row = jsonData[i] || [];
+        const rowData = {};
+        
+        // Map columns using headerMap
+        feesColumns.forEach((colName) => {
+          const excelIndex = headerMap[colName] !== undefined ? headerMap[colName] : feesColumns.indexOf(colName);
+          const value = row[excelIndex];
+          // Convert to string, handle dates and numbers
+          if (value === null || value === undefined) {
+            rowData[colName] = '';
+          } else if (typeof value === 'object' && value.getFullYear) {
+            // Date object
+            rowData[colName] = value.toLocaleDateString('en-GB');
+          } else {
+            rowData[colName] = String(value);
+          }
+        });
+        
+        rows.push(rowData);
+      }
+
+      // Populate table with all rows from Excel
+      populateFeesTable(rows);
+      
+      alert(`Successfully loaded ${rows.length} row(s) from Excel file.`);
+      
+      // Reset file input
+      event.target.value = '';
+    } catch (error) {
+      console.error('Error reading Excel file:', error);
+      alert('Error reading Excel file: ' + error.message);
+    }
+  };
+  
+  reader.readAsArrayBuffer(file);
+}
+
+// Populate table with data
+function populateFeesTable(data) {
+  const tbody = document.getElementById('feesTableBody');
+  if (!tbody) return;
+
+  tbody.innerHTML = '';
+  
+  // Add all rows from data
+  if (data && data.length > 0) {
+    data.forEach((rowData) => {
+      const row = document.createElement('tr');
+      feesColumns.forEach((colName) => {
+        const cell = document.createElement('td');
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.value = rowData[colName] || '';
+        input.style.cssText = 'width: 100%; padding: 8px; border: none; outline: none; background: transparent;';
+        input.addEventListener('blur', function() {
+          this.style.background = 'transparent';
+        });
+        input.addEventListener('focus', function() {
+          this.style.background = '#f0f0f0';
+        });
+        cell.appendChild(input);
+        cell.style.cssText = 'padding: 8px; border: 1px solid #ddd;';
+        row.appendChild(cell);
+      });
+      tbody.appendChild(row);
+    });
+  } else {
+    // If no data, create 3 empty rows
+    for (let i = 0; i < 3; i++) {
+      const row = document.createElement('tr');
+      feesColumns.forEach((col) => {
+        const cell = document.createElement('td');
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.style.cssText = 'width: 100%; padding: 8px; border: none; outline: none; background: transparent;';
+        input.addEventListener('blur', function() {
+          this.style.background = 'transparent';
+        });
+        input.addEventListener('focus', function() {
+          this.style.background = '#f0f0f0';
+        });
+        cell.appendChild(input);
+        cell.style.cssText = 'padding: 8px; border: 1px solid #ddd;';
+        row.appendChild(cell);
+      });
+      tbody.appendChild(row);
+    }
+  }
+}
+
+// Initialize table when page loads and fees tab is shown
+document.addEventListener('DOMContentLoaded', function() {
+  // Initialize table immediately
+  initializeFeesTable();
+  
+  // Also initialize when fees tab is shown (in case it's loaded dynamically)
+  const originalShowAdminTab = window.showAdminTab;
+  if (originalShowAdminTab) {
+    window.showAdminTab = function(tab) {
+      originalShowAdminTab(tab);
+      if (tab === 'fees') {
+        // Re-initialize if table is empty
+        const tbody = document.getElementById('feesTableBody');
+        if (tbody && tbody.children.length === 0) {
+          initializeFeesTable();
+        }
+      }
+    };
+  }
+});
+
+// Make functions globally accessible
+window.handleExcelUpload = handleExcelUpload;
+window.initializeFeesTable = initializeFeesTable;
+window.populateFeesTable = populateFeesTable;
+</script>
 </body>
 </html>
 

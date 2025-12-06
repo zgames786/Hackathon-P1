@@ -650,8 +650,14 @@ window.showAdminTab = function(tab) {
             // Load appropriate data based on tab
             if (tab === "dashboard") {
                 loadAdminData();
-            } else if (tab === "fees" && window.loadFeesData) {
-                window.loadFeesData();
+            } else if (tab === "fees") {
+                // Initialize fees table if it exists
+                if (window.initializeFeesTable) {
+                    const tbody = document.getElementById('feesTableBody');
+                    if (tbody && tbody.children.length === 0) {
+                        window.initializeFeesTable();
+                    }
+                }
             } else if (tab === "attendance" && window.loadAttendanceData) {
                 window.loadAttendanceData();
             } else if (tab === "admin" && window.renderManagementInterface) {
