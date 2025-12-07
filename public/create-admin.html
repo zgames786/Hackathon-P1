@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TNHA School App - Create Admin</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="login-container">
+  <h1>TNHA School App</h1>
+  <h2>Create Admin Account</h2>
+  
+  <div id="adminCreateForm" style="background: white; padding: 40px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); min-width: 300px; max-width: 400px; margin: 0 auto;">
+    <input type="text" id="adminFullName" placeholder="Full Name" autocomplete="name" style="display: block; margin: 15px auto; padding: 15px 20px; font-size: 16px; width: 100%; max-width: 280px; border-radius: 8px; border: 2px solid #e0e0e0; transition: border-color 0.3s; box-sizing: border-box;">
+    <input type="email" id="adminEmail" placeholder="Email" autocomplete="email" style="display: block; margin: 15px auto; padding: 15px 20px; font-size: 16px; width: 100%; max-width: 280px; border-radius: 8px; border: 2px solid #e0e0e0; transition: border-color 0.3s; box-sizing: border-box;">
+    <input type="password" id="adminPassword" placeholder="Password" autocomplete="new-password" style="display: block; margin: 15px auto; padding: 15px 20px; font-size: 16px; width: 100%; max-width: 280px; border-radius: 8px; border: 2px solid #e0e0e0; transition: border-color 0.3s; box-sizing: border-box;">
+    <div style="text-align: center;">
+      <button onclick="createAdmin()" style="padding: 15px 30px; margin: 10px 5px; font-size: 16px; border-radius: 8px; border: none; background: #667eea; color: white; cursor: pointer; transition: all 0.3s; font-weight: 600; min-width: 120px;">Create Admin</button>
+    </div>
+    <div id="adminCreateMessage" style="text-align: center; margin-top: 15px; min-height: 20px;"></div>
+    <div style="text-align: center; margin-top: 20px;">
+      <a href="index.html" style="color: #667eea; text-decoration: none;">Back to Login</a>
+    </div>
+  </div>
+</div>
+
+<!-- FIREBASE SDK DO NOT CHANGE -->
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+<script src="firebase-init.js"></script>
+<script src="create-admin.js"></script>
+</body>
+</html>
+
