@@ -7,6 +7,44 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 <style>
+.create-admin-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 40px 20px;
+}
+
+.create-admin-card {
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    width: 100%;
+    max-width: 380px;
+    padding: 32px;
+    text-align: center;
+}
+
+.create-admin-card .logo-container {
+    margin-bottom: 24px;
+}
+
+.create-admin-card .logo-container img {
+    width: 100px;
+    height: auto;
+}
+
+.create-admin-card h2 {
+    font-size: 22px;
+    margin: 0 0 24px 0;
+    color: #5D6D7E;
+    font-weight: 500;
+}
+
+#adminCreateForm {
+    width: 100%;
+}
+
 #adminCreateForm input {
     display: block;
     margin: 0 0 12px 0;
@@ -19,6 +57,8 @@
     transition: border-color 0.2s;
     box-sizing: border-box;
     background: white;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 #adminCreateForm input:focus {
@@ -26,48 +66,91 @@
     border-color: #667eea;
 }
 
+#adminCreateForm .login-form-buttons {
+    display: flex;
+    gap: 10px;
+    margin-top: 12px;
+    width: 100%;
+    max-width: 300px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+#adminCreateForm .login-form-buttons button {
+    flex: 1;
+    padding: 16px 24px;
+    font-size: 16px;
+    border-radius: 8px;
+    border: none;
+    background: #667eea;
+    color: white;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-weight: 600;
+}
+
+#adminCreateForm .login-form-buttons button:hover {
+    background: #5568d3;
+    transform: translateY(-1px);
+    box-shadow: 0 3px 8px rgba(0,0,0,0.15);
+}
+
+#adminCreateForm .login-form-buttons button:active {
+    transform: translateY(0);
+}
+
+#adminCreateMessage {
+    text-align: center;
+    margin-top: 15px;
+    min-height: 20px;
+    font-size: 14px;
+}
+
+.back-link {
+    text-align: center;
+    margin-top: 20px;
+}
+
+.back-link a {
+    color: #667eea;
+    text-decoration: none;
+    font-size: 14px;
+}
+
 @media (max-width: 768px) {
-    .login-left {
-        max-width: 100% !important;
-        padding: 0 20px;
-    }
-    
-    #adminCreateForm {
-        max-width: 100%;
+    .create-admin-card {
+        padding: 24px 20px;
     }
     
     #adminCreateForm input {
         max-width: 100%;
     }
     
-    .login-form-buttons {
-        max-width: 100% !important;
+    #adminCreateForm .login-form-buttons {
+        max-width: 100%;
     }
 }
 </style>
 </head>
 <body>
 
-<div class="login-wrapper">
-  <div class="login-container">
-    <div class="login-left" style="max-width: 450px; margin: 0 auto;">
-      <div id="title-container" style="justify-content: center; margin-bottom: 30px;">
-        <img src="images/tnha-logo.png" id="tnha-logo" alt="TNHA Logo" style="width: 100px; height: auto;">
+<div class="create-admin-wrapper">
+  <div class="create-admin-card">
+    <div class="logo-container">
+      <img src="images/tnha-logo.png" alt="TNHA Logo">
+    </div>
+    <h2>Create Admin Account</h2>
+    
+    <div id="adminCreateForm">
+      <input type="text" id="adminFullName" placeholder="Full Name" autocomplete="name">
+      <input type="email" id="adminEmail" placeholder="Email" autocomplete="email">
+      <input type="password" id="adminPassword" placeholder="Password" autocomplete="new-password">
+      <div class="login-form-buttons">
+        <button onclick="createAdmin()">Create Admin</button>
       </div>
-      <h1 id="main-title" style="text-align: center; margin-bottom: 10px;">TNHA School App</h1>
-      <h2 style="text-align: center; margin-bottom: 30px;">Create Admin Account</h2>
-      
-      <div id="adminCreateForm" style="max-width: 380px; margin: 0 auto;">
-        <input type="text" id="adminFullName" placeholder="Full Name" autocomplete="name">
-        <input type="email" id="adminEmail" placeholder="Email" autocomplete="email">
-        <input type="password" id="adminPassword" placeholder="Password" autocomplete="new-password">
-        <div class="login-form-buttons">
-          <button onclick="createAdmin()">Create Admin</button>
-        </div>
-        <div id="adminCreateMessage" style="text-align: center; margin-top: 15px; min-height: 20px;"></div>
-        <div style="text-align: center; margin-top: 20px;">
-          <a href="index.html" style="color: #667eea; text-decoration: none; font-size: 14px;">Back to Login</a>
-        </div>
+      <div id="adminCreateMessage"></div>
+      <div class="back-link">
+        <a href="index.html">Back to Login</a>
       </div>
     </div>
   </div>
@@ -81,4 +164,3 @@
 <script src="create-admin.js"></script>
 </body>
 </html>
-
