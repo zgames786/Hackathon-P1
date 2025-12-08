@@ -13,6 +13,7 @@
     align-items: center;
     min-height: 100vh;
     padding: 40px 20px;
+    padding-top: 60px;
 }
 
 .create-admin-card {
@@ -32,6 +33,7 @@
 .create-admin-card .logo-container img {
     width: 100px;
     height: auto;
+    filter: brightness(0.7);
 }
 
 .create-admin-card h2 {
@@ -142,8 +144,7 @@
     <h2>Create Admin Account</h2>
     
     <div id="adminCreateForm">
-      <input type="text" id="adminFullName" placeholder="Full Name" autocomplete="name">
-      <input type="email" id="adminEmail" placeholder="Email" autocomplete="email">
+      <input type="text" id="adminUsername" placeholder="Username" autocomplete="username">
       <input type="password" id="adminPassword" placeholder="Password" autocomplete="new-password">
       <div class="login-form-buttons">
         <button onclick="createAdmin()">Create Admin</button>

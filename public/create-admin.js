@@ -10,33 +10,25 @@ function showMessage(message, isError = false) {
 }
 
 async function createAdmin() {
-    const fullName = document.getElementById("adminFullName").value.trim();
-    const email = document.getElementById("adminEmail").value.trim();
+    const username = document.getElementById("adminUsername").value.trim();
     const password = document.getElementById("adminPassword").value;
     
     // Clear previous messages
     showMessage("");
     
     // Validation
-    if (!fullName || !email || !password) {
+    if (!username || !password) {
         showMessage("Please fill in all fields.", true);
         return;
     }
     
-    if (fullName.length < 2) {
-        showMessage("Full name must be at least 2 characters.", true);
+    if (username.length < 3) {
+        showMessage("Username must be at least 3 characters.", true);
         return;
     }
     
     if (password.length < 6) {
         showMessage("Password must be at least 6 characters.", true);
-        return;
-    }
-    
-    // Email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-        showMessage("Please enter a valid email address.", true);
         return;
     }
     
@@ -61,28 +53,31 @@ async function createAdmin() {
             return;
         }
         
-        // Create user with email and password
-        const userCredential = await authInstance.createUserWithEmailAndPassword(email, password);
+        // Create fake email from username (Firebase Auth requires email)
+        const fakeEmail = username + "@admins.local";
+        
+        // Create user with fakeEmail and password
+        const userCredential = await authInstance.createUserWithEmailAndPassword(fakeEmail, password);
         const user = userCredential.user;
         const uid = user.uid;
         
-        // Write to Firestore at admins/{uid}
-        const adminData = {
-            uid: uid,
-            email: email,
-            name: fullName,
-            role: "admin",
-            createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        };
+        // Write to Firestore at admins/{username}
+        try {
+            const adminData = {
+                uid: uid,
+                username: username,
+                email: fakeEmail,
+                role: "admin",
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+            await dbInstance.collection("admins").doc(username).set(adminData);
+        } catch (firestoreError) {
+            alert("Failed to create admin document: " + firestoreError.message);
+            return;
+        }
         
-        await dbInstance.collection("admins").doc(uid).set(adminData);
-        
-        showMessage("Admin account created successfully!");
-        
-        // Clear form
-        document.getElementById("adminFullName").value = "";
-        document.getElementById("adminEmail").value = "";
-        document.getElementById("adminPassword").value = "";
+        // Redirect to login page
+        window.location.href = "index.html";
         
     } catch (error) {
         console.error("Error creating admin:", error);
@@ -91,11 +86,11 @@ async function createAdmin() {
         let errorMessage = "An error occurred while creating the admin account.";
         
         if (error.code === "auth/email-already-in-use") {
-            errorMessage = "This email is already in use. Please use a different email.";
+            errorMessage = "This username is already in use. Please use a different username.";
         } else if (error.code === "auth/weak-password") {
             errorMessage = "Password is too weak. Please use a stronger password (at least 6 characters).";
         } else if (error.code === "auth/invalid-email") {
-            errorMessage = "Invalid email format. Please enter a valid email address.";
+            errorMessage = "Invalid email format.";
         } else if (error.code === "auth/operation-not-allowed") {
             errorMessage = "Email/password accounts are not enabled. Please contact the administrator.";
         } else if (error.message) {
