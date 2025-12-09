@@ -93,18 +93,10 @@ async function createAdmin() {
             username: username,
             createdAt: new Date().toISOString()
         };
-        await dbInstance.collection("admins").add(adminData);
+        await dbInstance.collection("admins").doc(username).set(adminData);
         
-        showAdminSuccess("Admin account created successfully! You can now login.");
-        
-        // Clear form
-        document.getElementById("adminUsername").value = "";
-        document.getElementById("adminPassword").value = "";
-        
-        // Redirect to login after 2 seconds
-        setTimeout(() => {
-            window.location.href = "index.html";
-        }, 2000);
+        // Redirect to login
+        window.location.href = "index.html";
         
     } catch (error) {
         console.error("Error creating admin:", error);
