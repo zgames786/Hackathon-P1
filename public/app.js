@@ -325,6 +325,11 @@ async function login() {
         try {
             const isValid = await checkAdminAccess(u, p);
             if (isValid) {
+                const ok = await isAdmin(u);
+                if (!ok) {
+                    alert("Admin not registered.");
+                    return;
+                }
                 clearLoginAttempts();
                 loggedInUser = u;
                 localStorage.setItem("loggedInUser", userType + "_" + u);
@@ -401,6 +406,12 @@ async function login() {
     }
 }
 
+// Check if admin document exists in Firestore
+async function isAdmin(username) {
+  const doc = await db.collection("admins").doc(username).get();
+  return doc.exists;
+}
+
 // Check admin access using Firebase Auth and admins collection
 async function checkAdminAccess(username, password) {
     try {
@@ -418,23 +429,7 @@ async function checkAdminAccess(username, password) {
                 const user = userCredential.user;
                 console.log("Step 4: Auth success, uid:", user.uid);
                 
-                // After successful auth, verify admin document exists in Firestore
-                if (window.db) {
-                    console.log("Step 5: checking admins collection");
-                    const adminDoc = await window.db.collection("admins").doc(username).get();
-                    
-                    if (adminDoc.exists) {
-                        // Admin document exists, login succeeds
-                        localStorage.setItem("adminUID", user.uid);
-                        return true;
-                    } else {
-                        // Admin document does not exist
-                        console.log("Admin document not found for username:", username);
-                        return false;
-                    }
-                }
-                
-                // If Firestore not available but auth succeeded, allow access
+                // Store admin UID
                 localStorage.setItem("adminUID", user.uid);
                 return true;
             } catch (authError) {
